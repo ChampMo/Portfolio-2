@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+:root {
+  /* ล็อคสีพื้นหลังให้เป็น Deep Space Black */
+  --background: #050505; 
+  --foreground: #ededed;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  
+  /* 
+    เชื่อมต่อ CSS Variables จาก Google Fonts (ใน layout.tsx) 
+    เข้ากับ Class ของ Tailwind 
+  */
+  --font-sans: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, monospace;
+  --font-serif: var(--font-cinzel), ui-serif, Georgia, serif;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  /* เซ็ตให้ทั้งเว็บใช้ Space Grotesk เป็นค่าเริ่มต้น */
+  font-family: var(--font-sans);
+  /* ป้องกันการเลื่อนจอแบบปกติ เพราะเราจะใช้ GSAP ควบคุม 3D Scroll */
+  overflow: hidden; 
+}
+
+/* เพิ่ม Utilities สำหรับเอฟเฟกต์แสงอวกาศ (เผื่อเรียกใช้) */
+@layer utilities {
+  .text-glow {
+    text-shadow: 0 0 10px rgba(34, 211, 238, 0.8);
+  }
+  .box-glow {
+    box-shadow: 0 0 15px rgba(34, 211, 238, 0.2);
+  }
+}

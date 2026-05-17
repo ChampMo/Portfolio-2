@@ -14,9 +14,7 @@ const eslintConfig = [
   {
     // 🌟 [ADDED]: ปิดกฎการตรวจ any และตัวแปรที่ไม่ได้ใช้งาน เพื่อปล่อยไฟเขียวให้ท่อผ่านฉลุย
     rules: {
-      "@typescript-eslint/no-explicit-any": "off",
-      "@typescript-eslint/no-unused-vars": "off",
-      "no-unused-vars": "off"
+      "no-console": "off"
     }
   }
 ];

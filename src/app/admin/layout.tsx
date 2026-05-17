@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'; // 🌟 1. นำเข้า useEf
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion'; 
-import { User, Code2, Cpu, Clock, FolderGit2, LogOut, Hexagon, Menu, X, Sun, Moon } from 'lucide-react'; 
+import { User, Code2, Cpu, Clock, FolderGit2, LogOut, Hexagon, Menu, X, Sun, Moon, Eye, EyeOff } from 'lucide-react';
 // นำเข้า Context และ Store
 import { AdminProvider, useAdmin } from '@/context/AdminContext';
 import { ToastProvider } from '@/context/ToastContext';
@@ -22,8 +22,8 @@ const adminMenu = [
 
 function SidebarNavigation({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (v: boolean) => void }) {
   const pathname = usePathname();
-  const { unsavedPaths } = useAdmin(); 
-  
+  const { unsavedPaths, isViewMode, setViewMode } = useAdmin();
+
   const theme = useThemeStore((s: any) => s.theme);
   const toggle = useThemeStore((s: any) => s.toggle); 
   const isLight = theme === 'light';
@@ -80,31 +80,46 @@ function SidebarNavigation({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: 
       </nav>
 
       <div className="p-4 border-t border-sky-300/20 dark:border-cyan-500/20 space-y-3 bg-white/5 dark:bg-transparent">
+        {/* View-mode badge */}
+        {isViewMode && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-sm bg-purple-500/10 border border-purple-500/30 text-purple-300 text-[10px] tracking-widest">
+            <Eye size={12} className="animate-pulse shrink-0" /> READ-ONLY MODE
+          </div>
+        )}
+
         <button
           type="button"
-          onClick={() => {
-            // 🌟 [FIXED] เปลี่ยนเป็น toggle()
-            if (typeof toggle === 'function') toggle();
-          }}
+          onClick={() => { if (typeof toggle === 'function') toggle(); }}
           className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-sm transition-all text-xs tracking-widest border
             bg-white/5 border-sky-300/40 text-sky-100 hover:bg-sky-500/20 hover:text-white hover:border-sky-400 shadow-md shadow-sky-950/20
             dark:bg-white/5 dark:border-transparent dark:text-gray-400 dark:hover:bg-cyan-500/10 dark:hover:text-cyan-300 dark:shadow-none"
         >
-          {isLight ? <Moon size={14} className="text-sky-300" /> : <Sun size={14} className="text-amber-400" />} 
+          {isLight ? <Moon size={14} className="text-sky-300" /> : <Sun size={14} className="text-amber-400" />}
           {isLight ? 'DARK MODE' : 'LIGHT MODE'}
         </button>
 
-        <button
-          onClick={async () => {
-            await fetch('/api/admin/auth/logout', { method: 'POST' });
-            window.location.reload();
-          }}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-sm transition-all text-xs tracking-widest border
-            bg-white/5 border-sky-300/20 text-sky-200/70 hover:bg-amber-500/20 hover:text-amber-300 hover:border-amber-500/40
-            dark:bg-white/5 dark:border-transparent dark:text-gray-500 dark:hover:bg-amber-500/10 dark:hover:text-amber-300"
-        >
-          <LogOut size={14} /> LOGOUT OFFICER
-        </button>
+        {isViewMode ? (
+          <button
+            onClick={() => setViewMode(false)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-sm transition-all text-xs tracking-widest border
+              bg-purple-500/5 border-purple-500/30 text-purple-300 hover:bg-purple-500/20 hover:text-purple-200 hover:border-purple-400/50"
+          >
+            <EyeOff size={14} /> EXIT VIEW MODE
+          </button>
+        ) : (
+          <button
+            onClick={async () => {
+              await fetch('/api/admin/auth/logout', { method: 'POST' });
+              window.location.reload();
+            }}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-sm transition-all text-xs tracking-widest border
+              bg-white/5 border-sky-300/20 text-sky-200/70 hover:bg-amber-500/20 hover:text-amber-300 hover:border-amber-500/40
+              dark:bg-white/5 dark:border-transparent dark:text-gray-500 dark:hover:bg-amber-500/10 dark:hover:text-amber-300"
+          >
+            <LogOut size={14} /> LOGOUT OFFICER
+          </button>
+        )}
+
         <Link href="/">
           <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-sm transition-all text-xs tracking-widest border
             bg-white/5 border-sky-300/20 text-sky-200/70 hover:bg-red-500/20 hover:text-red-300 hover:border-red-500/40
@@ -149,6 +164,30 @@ function SidebarNavigation({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: 
   );
 }
 
+function AdminMain({ children }: { children: React.ReactNode }) {
+  const { isViewMode, setViewMode } = useAdmin();
+  return (
+    <div className="flex flex-col flex-1 h-full overflow-hidden">
+      {isViewMode && (
+        <div className="flex items-center justify-between px-6 py-2 bg-purple-500/10 border-b border-purple-500/30 shrink-0">
+          <div className="flex items-center gap-2 font-mono text-[10px] tracking-widest text-purple-300">
+            <Eye size={11} className="animate-pulse" /> READ-ONLY VIEW MODE — all editing is disabled
+          </div>
+          <button
+            onClick={() => setViewMode(false)}
+            className="flex items-center gap-1.5 font-mono text-[10px] tracking-widest text-purple-400 hover:text-white transition-colors"
+          >
+            <EyeOff size={11} /> EXIT
+          </button>
+        </div>
+      )}
+      <main className="flex-1 p-6 md:p-10 overflow-y-auto custom-scrollbar relative">
+        {children}
+      </main>
+    </div>
+  );
+}
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -170,10 +209,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
 
             <SidebarNavigation isOpen={isMobileMenuOpen} setIsOpen={setIsMobileMenuOpen} />
-            
-            <main className="flex-1 p-6 md:p-10 h-full overflow-y-auto custom-scrollbar relative">
-              {children}
-            </main>
+            <AdminMain>{children}</AdminMain>
           </div>
         </AdminAuthGate>
       </ToastProvider>

@@ -30,7 +30,7 @@ export default function ExperienceAdmin() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingSector, setIsSavingSector] = useState(false);
   
-  const { setUnsavedPath } = useAdmin();
+  const { setUnsavedPath, isViewMode } = useAdmin();
   const { showToast } = useToast();
   const theme = useThemeStore((s) => s.theme); // 🌟 2. เรียกใช้งานสถานะธีม
   const isLight = theme === 'light';
@@ -126,18 +126,20 @@ export default function ExperienceAdmin() {
           <h2 className="text-lg font-serif text-white flex items-center gap-2">
             <Terminal size={18} className="text-cyan-400" /> Sector Details
           </h2>
-          <button 
-            onClick={handleSaveSector}
-            disabled={isSavingSector || !hasSectorChanges}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-sm text-xs font-mono transition-all border ${
-              hasSectorChanges 
-                ? 'bg-cyan-500 border-cyan-400 text-[#001320] shadow-[0_0_10px_rgba(34,211,238,0.4)] cursor-pointer' 
-                : 'bg-white/5 border-sky-300/20 dark:border-white/10 text-sky-200/40 cursor-not-allowed'
-            }`}
-          >
-            {isSavingSector ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-            {isSavingSector ? 'SAVING...' : hasSectorChanges ? 'SAVE SECTOR' : 'SECTOR UP TO DATE'}
-          </button>
+          {!isViewMode && (
+            <button
+              onClick={handleSaveSector}
+              disabled={isSavingSector || !hasSectorChanges}
+              className={`flex items-center gap-2 px-4 py-1.5 rounded-sm text-xs font-mono transition-all border ${
+                hasSectorChanges
+                  ? 'bg-cyan-500 border-cyan-400 text-[#001320] shadow-[0_0_10px_rgba(34,211,238,0.4)] cursor-pointer'
+                  : 'bg-white/5 border-sky-300/20 dark:border-white/10 text-sky-200/40 cursor-not-allowed'
+              }`}
+            >
+              {isSavingSector ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+              {isSavingSector ? 'SAVING...' : hasSectorChanges ? 'SAVE SECTOR' : 'SECTOR UP TO DATE'}
+            </button>
+          )}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-1">

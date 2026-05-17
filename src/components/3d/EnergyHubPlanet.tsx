@@ -22,7 +22,15 @@ import * as THREE from 'three';
 import { useRouter, usePathname } from 'next/navigation';
 import gsap from 'gsap';
 import { useOrbitPosition, type OrbitParams } from '@/lib/3d/useOrbitPosition';
-import { servicesData, type Service } from '@/lib/mock/services';
+import { useAppStore } from '@/lib/store/useAppStore';
+
+// Matches the ServiceItemSchema in the Service Mongoose model
+type ApiServiceItem = {
+  _id: string;
+  title: string;
+  description: string;
+  linkedProjectIds: string[];
+};
 
 // Per-service accent hues — drive the local point light tint and monolith glow.
 const SERVICE_HUES = ['#22d3ee', '#a78bfa', '#10b981', '#fb7185'];
@@ -44,12 +52,24 @@ export default function EnergyHubPlanet({
   const pathname = usePathname();
   const isFocused = pathname === orbit.path;
 
+  const setSummaryMode = useAppStore((s) => s.setSummaryMode);
   const [planetHovered, setPlanetHovered] = useState(false);
   const [hoveredService, setHoveredService] = useState<number | null>(null);
+  const [services, setServices] = useState<ApiServiceItem[]>([]);
   useCursor(planetHovered || hoveredService !== null);
 
   const stormGroupRef = useRef<THREE.Group>(null);
   const accentLightRef = useRef<THREE.PointLight>(null);
+
+  // Fetch live service data from the API
+  useEffect(() => {
+    fetch('/api/services')
+      .then((res) => res.json())
+      .then((data) => {
+        setServices(Array.isArray(data?.services) ? data.services : []);
+      })
+      .catch(() => setServices([]));
+  }, []);
 
   // Storm arcs spin fast — surface lightning impression
   useFrame((_, delta) => {
@@ -64,7 +84,7 @@ export default function EnergyHubPlanet({
   useEffect(() => {
     const light = accentLightRef.current;
     if (!light) return;
-    const targetHex = hoveredService !== null ? SERVICE_HUES[hoveredService] : color;
+    const targetHex = hoveredService !== null ? (SERVICE_HUES[hoveredService] ?? color) : color;
     const target = new THREE.Color(targetHex);
     gsap.to(light.color, {
       r: target.r,
@@ -75,7 +95,7 @@ export default function EnergyHubPlanet({
       overwrite: true,
     });
     gsap.to(light, {
-      intensity: hoveredService !== null ? 3.6 : 1.2,
+      intensity: hoveredService !== null ? 7.0 : 3.0,
       duration: 0.6,
       ease: 'power2.out',
       overwrite: true,
@@ -85,6 +105,7 @@ export default function EnergyHubPlanet({
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     router.push(orbit.path);
+    setSummaryMode(true);
   };
 
   return (
@@ -105,7 +126,7 @@ export default function EnergyHubPlanet({
         <MeshDistortMaterial
           color={planetHovered ? '#ffb866' : color}
           emissive={color}
-          emissiveIntensity={0.35}
+          emissiveIntensity={1.8}
           distort={0.45}
           speed={2.5}
           roughness={0.4}
@@ -133,14 +154,14 @@ export default function EnergyHubPlanet({
       <pointLight
         ref={accentLightRef}
         position={[0, 0, 0]}
-        intensity={1.2}
-        distance={9}
+        intensity={3.0}
+        distance={12}
         color={color}
       />
 
-      {/* 🗿 Service Monoliths around the equator */}
-      {servicesData.services.map((service, i) => {
-        const angle = (i / servicesData.services.length) * Math.PI * 2;
+      {/* 🗿 Service Monoliths — only rendered once data has loaded */}
+      {services.map((service, i) => {
+        const angle = (i / services.length) * Math.PI * 2;
         const anchor: [number, number, number] = [
           Math.cos(angle) * PLANET_RADIUS,
           0,
@@ -148,7 +169,7 @@ export default function EnergyHubPlanet({
         ];
         return (
           <Monolith
-            key={service.id}
+            key={service._id}
             service={service}
             staggerIndex={i}
             hue={SERVICE_HUES[i] ?? color}
@@ -179,7 +200,7 @@ export default function EnergyHubPlanet({
 // ── Monolith ────────────────────────────────────────────────────────────────
 
 interface MonolithProps {
-  service: Service;
+  service: ApiServiceItem;
   staggerIndex: number;
   hue: string;
   anchor: [number, number, number];
@@ -215,9 +236,11 @@ function Monolith({
     });
   }, [isFocused, staggerIndex]);
 
+  // Use first sentence of description as the short tagline displayed on hover
+  const tagline = service.description.split('.')[0] ?? service.description;
+
   return (
     <group ref={groupRef} position={anchor} scale={[1, IDLE_SCALE_Y, 1]}>
-      {/* Tall slab — base sits flush with anchor when group.scale.y === 1 */}
       <mesh
         position={[0, 0.9, 0]}
         onClick={(e) => e.stopPropagation()}
@@ -256,7 +279,7 @@ function Monolith({
             outlineWidth={0.005}
             outlineColor="#000000"
           >
-            {service.name}
+            {service.title}
           </Text>
           <Text
             position={[0, 0.0, 0]}
@@ -268,7 +291,7 @@ function Monolith({
             outlineWidth={0.004}
             outlineColor="#000000"
           >
-            {service.tagline}
+            {tagline}
           </Text>
         </Billboard>
       )}

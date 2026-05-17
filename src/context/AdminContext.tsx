@@ -5,12 +5,15 @@ import { createContext, useContext, useState, ReactNode } from 'react';
 interface AdminContextType {
   unsavedPaths: Record<string, boolean>;
   setUnsavedPath: (path: string, isUnsaved: boolean) => void;
+  isViewMode: boolean;
+  setViewMode: (v: boolean) => void;
 }
 
 const AdminContext = createContext<AdminContextType | undefined>(undefined);
 
 export function AdminProvider({ children }: { children: ReactNode }) {
   const [unsavedPaths, setUnsavedPaths] = useState<Record<string, boolean>>({});
+  const [isViewMode, setViewMode] = useState(false);
 
   const setUnsavedPath = (path: string, isUnsaved: boolean) => {
     setUnsavedPaths((prev) => {
@@ -20,7 +23,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AdminContext.Provider value={{ unsavedPaths, setUnsavedPath }}>
+    <AdminContext.Provider value={{ unsavedPaths, setUnsavedPath, isViewMode, setViewMode }}>
       {children}
     </AdminContext.Provider>
   );

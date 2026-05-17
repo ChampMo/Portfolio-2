@@ -16,7 +16,15 @@ import * as THREE from 'three';
 import { useRouter, usePathname } from 'next/navigation';
 import gsap from 'gsap';
 import { useOrbitPosition, type OrbitParams } from '@/lib/3d/useOrbitPosition';
-import { experienceData } from '@/lib/mock/experience';
+import { useAppStore } from '@/lib/store/useAppStore';
+
+// Type matching the Experience Mongoose model's ExperienceItemSchema
+type ExperienceEntry = {
+  _id: string;
+  title: string;
+  time: string;
+  details: string[];
+};
 
 interface ChronoRingPlanetProps extends OrbitParams {
   color: string;
@@ -26,10 +34,7 @@ interface ChronoRingPlanetProps extends OrbitParams {
 const DIAL_RADIUS = 2.0;
 const DIAL_TUBE = 0.55;
 const DIAL_FLATTEN = 0.18;
-
 const TAU = Math.PI * 2;
-const ENTRY_COUNT = experienceData.entries.length;
-const STEP = TAU / ENTRY_COUNT;
 
 export default function ChronoRingPlanet({
   color,
@@ -44,9 +49,25 @@ export default function ChronoRingPlanet({
   const dialRef = useRef<THREE.Group>(null);
   const cardRef = useRef<THREE.Group>(null);
 
+  const setSummaryMode = useAppStore((s) => s.setSummaryMode);
+  const [entries, setEntries] = useState<ExperienceEntry[]>([]);
   const [hovered, setHovered] = useState(false);
   const [alignedIdx, setAlignedIdx] = useState(0);
   useCursor(hovered);
+
+  // Fetch live experience data from the API
+  useEffect(() => {
+    fetch('/api/experience')
+      .then((res) => res.json())
+      .then((data) => {
+        setEntries(Array.isArray(data?.experiences) ? data.experiences : []);
+      })
+      .catch(() => setEntries([]));
+  }, []);
+
+  // Derived values — computed inside the component so they are always valid
+  const entryCount = entries.length;
+  const step = entryCount > 0 ? TAU / entryCount : TAU;
 
   // Drag state — stored in refs to avoid re-render churn
   const dragging = useRef(false);
@@ -61,21 +82,18 @@ export default function ChronoRingPlanet({
   // 🔁 Per-frame: idle auto-spin OR drag/inertia, then update aligned index
   useFrame((_, delta) => {
     const dial = dialRef.current;
-    if (!dial) return;
+    if (!dial || entryCount === 0) return;
 
     if (!isFocused) {
-      // Calm auto-rotation when nobody's looking
       dial.rotation.y += delta * 0.15;
     } else if (!dragging.current) {
-      // Inertia decay after release
       dial.rotation.y += angularVel.current;
       angularVel.current *= 0.92;
       if (Math.abs(angularVel.current) < 0.0005) angularVel.current = 0;
     }
 
-    // Aligned entry: the one currently at the pointer (+Z direction)
     const norm = ((dial.rotation.y % TAU) + TAU) % TAU;
-    const idx = Math.round(norm / STEP) % ENTRY_COUNT;
+    const idx = Math.round(norm / step) % entryCount;
     if (idx !== alignedIdx) setAlignedIdx(idx);
   });
 
@@ -96,8 +114,8 @@ export default function ChronoRingPlanet({
 
   const snapDialToNearestStop = () => {
     const dial = dialRef.current;
-    if (!dial) return;
-    const snapped = Math.round(dial.rotation.y / STEP) * STEP;
+    if (!dial || entryCount === 0) return;
+    const snapped = Math.round(dial.rotation.y / step) * step;
     gsap.to(dial.rotation, {
       y: snapped,
       duration: 0.55,
@@ -107,7 +125,7 @@ export default function ChronoRingPlanet({
   };
 
   const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
-    if (!focusedRef.current) return; // not in drag mode — let onClick handle navigation
+    if (!focusedRef.current) return;
     e.stopPropagation();
     dragging.current = true;
     movedDistance.current = 0;
@@ -119,8 +137,7 @@ export default function ChronoRingPlanet({
       const dx = ev.clientX - lastClientX.current;
       lastClientX.current = ev.clientX;
       movedDistance.current += Math.abs(dx);
-      const rotSpeed = 0.01;
-      const dRot = dx * rotSpeed;
+      const dRot = dx * 0.01;
       dialRef.current.rotation.y += dRot;
       angularVel.current = dRot * 0.6;
     };
@@ -130,7 +147,6 @@ export default function ChronoRingPlanet({
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
       window.removeEventListener('pointercancel', onUp);
-      // Snap if we're basically stopped
       if (Math.abs(angularVel.current) < 0.012) {
         snapDialToNearestStop();
       }
@@ -143,15 +159,19 @@ export default function ChronoRingPlanet({
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
-    // Treat short drag as a click; ignore drags that traveled far
     if (movedDistance.current > 6) return;
     if (!isFocused) router.push(orbit.path);
+    setSummaryMode(true);
   };
 
-  const aligned = experienceData.entries[alignedIdx];
+  // Safe access — null when data hasn't loaded yet
+  const aligned = entryCount > 0 ? entries[alignedIdx] : null;
 
   return (
     <group ref={groupRef}>
+      {/* Planet-local glow light */}
+      <pointLight position={[0, 0, 0]} intensity={hovered ? 3.5 : 2.0} distance={10} color={color} />
+
       {/* 🎯 Stationary pointer indicator at +Z ("12 o'clock") — alignment marker */}
       <mesh
         position={[0, 0.5, DIAL_RADIUS + 0.15]}
@@ -181,7 +201,7 @@ export default function ChronoRingPlanet({
           <meshStandardMaterial
             color={hovered ? '#60a5fa' : color}
             emissive={color}
-            emissiveIntensity={0.4}
+            emissiveIntensity={2.0}
             metalness={0.85}
             roughness={0.3}
           />
@@ -195,18 +215,15 @@ export default function ChronoRingPlanet({
           <meshBasicMaterial color="#67e8f9" transparent opacity={0.4} />
         </Torus>
 
-        {/* Entry markers around the dial */}
-        {experienceData.entries.map((entry, i) => {
-          // Place at angle i*STEP on the dial: x = sin, z = cos so that i=0 starts
-          // at +Z, matching the pointer indicator.
-          const a = i * STEP;
+        {/* Entry markers around the dial — only rendered once data has loaded */}
+        {entries.map((entry, i) => {
+          const a = i * step;
           const x = Math.sin(a) * DIAL_RADIUS;
           const z = Math.cos(a) * DIAL_RADIUS;
           const isAligned = alignedIdx === i;
           return (
-            <group key={entry.id} position={[x, 0.16, z]}>
-              {/* Tick marker on dial surface */}
-              <mesh position={[0, 0, 0]}>
+            <group key={entry._id} position={[x, 0.16, z]}>
+              <mesh>
                 <boxGeometry args={[0.12, 0.08, 0.12]} />
                 <meshStandardMaterial
                   color="#22d3ee"
@@ -216,7 +233,6 @@ export default function ChronoRingPlanet({
                   roughness={0.25}
                 />
               </mesh>
-              {/* Year text, always facing camera */}
               <Billboard position={[0, 0.32, 0]}>
                 <Text
                   fontSize={isAligned ? 0.2 : 0.16}
@@ -249,62 +265,56 @@ export default function ChronoRingPlanet({
             <meshBasicMaterial color="#0b1220" transparent opacity={0.85} />
           </mesh>
 
-          <Text
-            position={[0, 0.62, 0.01]}
-            fontSize={0.2}
-            color="#ffffff"
-            anchorX="center"
-            anchorY="middle"
-            maxWidth={3.4}
-            raycast={() => null}
-          >
-            {aligned.role}
-          </Text>
-          <Text
-            position={[0, 0.3, 0.01]}
-            fontSize={0.14}
-            color={color}
-            anchorX="center"
-            anchorY="middle"
-            maxWidth={3.4}
-            raycast={() => null}
-          >
-            {aligned.organization}
-          </Text>
-          <Text
-            position={[0, 0.06, 0.01]}
-            fontSize={0.11}
-            color="#94a3b8"
-            anchorX="center"
-            anchorY="middle"
-            maxWidth={3.4}
-            raycast={() => null}
-          >
-            {`${aligned.time}   ·   ${aligned.location}`}
-          </Text>
-          <Text
-            position={[0, -0.32, 0.01]}
-            fontSize={0.11}
-            color="#cbd5e1"
-            anchorX="center"
-            anchorY="middle"
-            maxWidth={3.4}
-            textAlign="center"
-            raycast={() => null}
-          >
-            {aligned.summary}
-          </Text>
-          <Text
-            position={[0, -0.78, 0.01]}
-            fontSize={0.09}
-            color="#475569"
-            anchorX="center"
-            anchorY="middle"
-            letterSpacing={0.25}
-            raycast={() => null}
-          >
-            {`[ ${alignedIdx + 1} / ${ENTRY_COUNT} — DRAG DIAL TO SCROLL ]`}
-          </Text>
+          {/* Only render text content once data is available */}
+          {aligned && (
+            <>
+              <Text
+                position={[0, 0.62, 0.01]}
+                fontSize={0.2}
+                color="#ffffff"
+                anchorX="center"
+                anchorY="middle"
+                maxWidth={3.4}
+                raycast={() => null}
+              >
+                {aligned.title}
+              </Text>
+              <Text
+                position={[0, 0.30, 0.01]}
+                fontSize={0.14}
+                color={color}
+                anchorX="center"
+                anchorY="middle"
+                maxWidth={3.4}
+                raycast={() => null}
+              >
+                {aligned.time}
+              </Text>
+              <Text
+                position={[0, -0.10, 0.01]}
+                fontSize={0.11}
+                color="#cbd5e1"
+                anchorX="center"
+                anchorY="middle"
+                maxWidth={3.4}
+                textAlign="center"
+                raycast={() => null}
+              >
+                {aligned.details[0] ?? ''}
+              </Text>
+              <Text
+                position={[0, -0.78, 0.01]}
+                fontSize={0.09}
+                color="#475569"
+                anchorX="center"
+                anchorY="middle"
+                letterSpacing={0.25}
+                raycast={() => null}
+              >
+                {`[ ${alignedIdx + 1} / ${entryCount} — DRAG DIAL TO SCROLL ]`}
+              </Text>
+            </>
+          )}
         </Billboard>
       </group>
 

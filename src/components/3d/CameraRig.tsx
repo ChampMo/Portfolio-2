@@ -18,7 +18,7 @@ const warpCoordinates: Record<string, { pos: [number, number, number]; lookAt: [
   '/overview': { pos: [0, 20, 50], lookAt: [0, 0, 0] },
 
   // 🔮 หน้า Core: เพิ่ม Z จาก 16 เป็น 20-24 ให้ไม่ชิดคริสตัลเกินไป
-  '/about':    { pos: [0, 1, 12],  lookAt: [0, 0, 0] },
+  '/about':    { pos: [0, 1, 11],  lookAt: [0, 0, 0] },
 };
 
 // 🪐 Planet routes are handled dynamically (their target moves each frame).

@@ -20,15 +20,59 @@ import * as THREE from 'three';
 import { useRouter, usePathname } from 'next/navigation';
 import gsap from 'gsap';
 import { useOrbitPosition, type OrbitParams } from '@/lib/3d/useOrbitPosition';
-import { projectsData, type Project } from '@/lib/mock/projects';
 import { useAppStore } from '@/lib/store/useAppStore';
+
+// Matches the Project Mongoose model returned by GET /api/projects
+type ApiProject = {
+  _id: string;
+  title: string;
+  time: string;
+  coverImage: string;
+  tags: string[];
+  blocks: Array<{ id: string; type: string; content: unknown }>;
+};
+
+// Normalised shape consumed by the 3D sub-components
+type DisplayProject = {
+  id: string;
+  name: string;
+  codename: string;
+  year: string;
+  status: string;
+  summary: string;
+  stack: string[];
+  repoUrl?: string;
+};
+
+function toDisplayProject(p: ApiProject): DisplayProject {
+  // Attempt to pull the first text/paragraph block as a summary
+  const textBlock = p.blocks.find(
+    (b) => (b.type === 'paragraph' || b.type === 'text') && typeof b.content === 'string'
+  );
+  const summary =
+    typeof textBlock?.content === 'string'
+      ? textBlock.content
+      : p.tags.length > 0
+      ? p.tags.join(' · ')
+      : p.title;
+
+  return {
+    id: String(p._id),
+    name: p.title,
+    codename: `PROJECT_${p.title.toUpperCase().replace(/\s+/g, '_')}`,
+    year: p.time,
+    status: 'DEPLOYED',
+    summary,
+    stack: p.tags,
+  };
+}
 
 interface ConstellationPlanetProps extends OrbitParams {
   color: string;
   label: string;
 }
 
-// Triangular nebula formation — one local position per project.
+// Triangular nebula formation — one local position per project slot (up to 3).
 const STAR_POSITIONS: Array<[number, number, number]> = [
   [0, 0.9, 0],          // top
   [-1.5, -0.7, 0.4],    // bottom-left
@@ -36,7 +80,7 @@ const STAR_POSITIONS: Array<[number, number, number]> = [
 ];
 
 // Connecting line pairs (indices into STAR_POSITIONS)
-const LINKS: Array<[number, number]> = [
+const ALL_LINKS: Array<[number, number]> = [
   [0, 1],
   [1, 2],
   [2, 0],
@@ -55,14 +99,31 @@ export default function ConstellationPlanet({
 
   const focusedProjectId = useAppStore((s) => s.focusedProjectId);
   const setFocusedProjectId = useAppStore((s) => s.setFocusedProjectId);
+  const setSummaryMode = useAppStore((s) => s.setSummaryMode);
 
   const [planetHovered, setPlanetHovered] = useState(false);
+  const [projects, setProjects] = useState<DisplayProject[]>([]);
   useCursor(planetHovered);
 
-  const projects = projectsData.projects.slice(0, STAR_POSITIONS.length);
+  // Fetch live project data from the API
+  useEffect(() => {
+    fetch('/api/projects')
+      .then((res) => res.json())
+      .then((data: unknown) => {
+        const raw = Array.isArray(data) ? (data as ApiProject[]) : [];
+        setProjects(raw.slice(0, STAR_POSITIONS.length).map(toDisplayProject));
+      })
+      .catch(() => setProjects([]));
+  }, []);
+
   const focusedIdx = focusedProjectId
     ? projects.findIndex((p) => p.id === focusedProjectId)
     : -1;
+
+  // Only draw lines between positions that both have a project star
+  const validLinks = ALL_LINKS.filter(
+    ([a, b]) => a < projects.length && b < projects.length
+  );
 
   // 💫 Shift inner group so the focused star ends up at the orbital origin
   useEffect(() => {
@@ -94,15 +155,18 @@ export default function ConstellationPlanet({
   const handlePlanetClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     if (!isFocused) router.push(orbit.path);
+    setSummaryMode(true);
   };
 
-  const handleStarClick = (project: Project) => {
+  const handleStarClick = (project: DisplayProject) => {
     if (!isFocused) {
       router.push(orbit.path);
+      setSummaryMode(true);
       return;
     }
-    // Toggle: clicking the focused star again clears the sub-view
-    setFocusedProjectId(focusedProjectId === project.id ? null : project.id);
+    const next = focusedProjectId === project.id ? null : project.id;
+    setFocusedProjectId(next);
+    if (next !== null) setSummaryMode(true);
   };
 
   return (
@@ -119,8 +183,8 @@ export default function ConstellationPlanet({
 
       {/* Inner group — translates so the focused star slides to local origin */}
       <group ref={innerRef}>
-        {/* Connecting constellation lines */}
-        {LINKS.map(([a, b], i) => (
+        {/* Connecting constellation lines — filtered to positions with actual stars */}
+        {validLinks.map(([a, b], i) => (
           <Line
             key={i}
             points={[STAR_POSITIONS[a], STAR_POSITIONS[b]]}
@@ -131,7 +195,7 @@ export default function ConstellationPlanet({
           />
         ))}
 
-        {/* Stars */}
+        {/* Stars — rendered only once data has loaded */}
         {projects.map((project, i) => (
           <ProjectStar
             key={project.id}
@@ -149,7 +213,7 @@ export default function ConstellationPlanet({
       </group>
 
       {/* Project sub-view — anchored to the orbital origin (i.e. the focused star post-shift) */}
-      {focusedIdx >= 0 && isFocused && (
+      {focusedIdx >= 0 && isFocused && projects[focusedIdx] && (
         <ProjectDetail
           key={projects[focusedIdx].id}
           project={projects[focusedIdx]}
@@ -177,7 +241,7 @@ export default function ConstellationPlanet({
 // ── Single project star ─────────────────────────────────────────────────────
 
 interface ProjectStarProps {
-  project: Project;
+  project: DisplayProject;
   position: [number, number, number];
   color: string;
   isFocused: boolean;
@@ -225,7 +289,7 @@ function ProjectStar({
         <meshStandardMaterial
           color="#ffffff"
           emissive={color}
-          emissiveIntensity={hovered || isFocused ? 2.6 : 1.2}
+          emissiveIntensity={hovered || isFocused ? 4.0 : 2.2}
           metalness={0.2}
           roughness={0.4}
         />
@@ -234,8 +298,8 @@ function ProjectStar({
       {/* Star glow halo */}
       <pointLight
         color={color}
-        intensity={hovered || isFocused ? 1.8 : 0.6}
-        distance={2.6}
+        intensity={hovered || isFocused ? 4.0 : 1.8}
+        distance={4.0}
       />
 
       {/* Project name — always faces camera */}
@@ -259,7 +323,7 @@ function ProjectStar({
 // ── Glassmorphism project mockup ────────────────────────────────────────────
 
 interface ProjectDetailProps {
-  project: Project;
+  project: DisplayProject;
   color: string;
 }
 
@@ -311,7 +375,6 @@ function ProjectDetail({ project, color }: ProjectDetailProps) {
           <meshBasicMaterial color={color} transparent opacity={0.35} />
         </mesh>
 
-        {/* Screen content */}
         <Text
           position={[0, 0.7, 0.01]}
           fontSize={0.24}
@@ -371,9 +434,9 @@ function ProjectDetail({ project, color }: ProjectDetailProps) {
         </Text>
       </Billboard>
 
-      {/* Repo link button (separate billboard so it tracks camera independently) */}
-      {project.links?.repo && (
-        <RepoLink position={[0, -1.55, 0]} url={project.links.repo} color={color} />
+      {/* Repo link button — only shown when a URL is available */}
+      {project.repoUrl && (
+        <RepoLink position={[0, -1.55, 0]} url={project.repoUrl} color={color} />
       )}
     </group>
   );

@@ -137,15 +137,15 @@ html:not(.dark) body {
   .custom-scrollbar::-webkit-scrollbar { width: 4px; }
   .custom-scrollbar::-webkit-scrollbar-track { background: transparent; border: none; }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: color-mix(in srgb, var(--accent-cyan) 50%, transparent);
+    background: var(--scrollbar-thumb);
     border-radius: 10px;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: var(--accent-cyan);
+    background: var(--scrollbar-thumb-hover);
   }
   .custom-scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: color-mix(in srgb, var(--accent-cyan) 50%, transparent) transparent;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
   }
 }
 

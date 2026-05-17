@@ -13,24 +13,47 @@ import * as THREE from 'three';
 import { useRouter, usePathname } from 'next/navigation';
 import gsap from 'gsap';
 import { useOrbitPosition, type OrbitParams } from '@/lib/3d/useOrbitPosition';
-import { skillsData } from '@/lib/mock/skills';
+import { useAppStore } from '@/lib/store/useAppStore';
+
+// Matches the flat skill groups stored in the Skill Mongoose model
+type SkillMatrix = {
+  languages: string[];
+  database: string[];
+  frameworks: string[];
+  tools: string[];
+};
+
+type SkillCategory = {
+  name: string;
+  items: string[];
+};
 
 interface TechForgePlanetProps extends OrbitParams {
   color: string;
   label: string;
 }
 
-// One orthogonal-ish orientation per skill category (we expect 4).
+// One orthogonal-ish orientation per skill category (aligned to the 4 DB skill groups).
 const RING_ORIENTATIONS: Array<[number, number, number]> = [
-  [0, 0, 0],                           // XY plane
-  [Math.PI / 2, 0, 0],                 // XZ plane (horizontal disc)
-  [0, 0, Math.PI / 2],                 // YZ plane
-  [Math.PI / 4, Math.PI / 4, 0],       // oblique
+  [0, 0, 0],                           // XY plane — LANGUAGES
+  [Math.PI / 2, 0, 0],                 // XZ plane — DATABASE
+  [0, 0, Math.PI / 2],                 // YZ plane — FRAMEWORKS
+  [Math.PI / 4, Math.PI / 4, 0],       // oblique — TOOLS
 ];
 
-// Cheap deterministic "proficiency" until skills.ts carries real numbers.
+// Cheap deterministic "proficiency" until skills carry real numbers.
 const proficiencyFor = (categoryIdx: number, itemIdx: number) =>
   70 + ((categoryIdx * 5 + itemIdx * 7) % 26); // 70..95
+
+// Map the flat DB SkillMatrix to the ordered category array the rings expect
+function toCategories(matrix: SkillMatrix): SkillCategory[] {
+  return [
+    { name: 'LANGUAGES', items: matrix.languages ?? [] },
+    { name: 'DATABASE',  items: matrix.database  ?? [] },
+    { name: 'FRAMEWORKS', items: matrix.frameworks ?? [] },
+    { name: 'TOOLS',     items: matrix.tools     ?? [] },
+  ];
+}
 
 export default function TechForgePlanet({
   color,
@@ -42,11 +65,29 @@ export default function TechForgePlanet({
   const pathname = usePathname();
   const isFocused = pathname === orbit.path;
 
+  const setSummaryMode = useAppStore((s) => s.setSummaryMode);
   const [hovered, setHovered] = useState(false);
+  const [categories, setCategories] = useState<SkillCategory[]>([]);
   useCursor(hovered);
 
   const coreRef = useRef<THREE.Group>(null);
   const ringsGroupRef = useRef<THREE.Group>(null);
+
+  // Fetch live skill data from the API
+  useEffect(() => {
+    fetch('/api/skills')
+      .then((res) => res.json())
+      .then((data) => {
+        const matrix: SkillMatrix = data?.skills ?? {
+          languages: [],
+          database: [],
+          frameworks: [],
+          tools: [],
+        };
+        setCategories(toCategories(matrix));
+      })
+      .catch(() => setCategories([]));
+  }, []);
 
   // Gentle spin on the server-rack core
   useFrame((_, delta) => {
@@ -71,6 +112,7 @@ export default function TechForgePlanet({
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     router.push(orbit.path);
+    setSummaryMode(true);
   };
 
   return (
@@ -85,9 +127,11 @@ export default function TechForgePlanet({
         <sphereGeometry args={[1.8, 16, 16]} />
       </mesh>
 
+      {/* Planet-local glow light */}
+      <pointLight position={[0, 0, 0]} intensity={hovered ? 4.0 : 2.0} distance={10} color={color} />
+
       {/* 🏗️ Central server-rack core */}
       <group ref={coreRef}>
-        {/* Tall central column */}
         <mesh>
           <cylinderGeometry args={[0.35, 0.35, 1.8, 24]} />
           <meshStandardMaterial
@@ -95,11 +139,10 @@ export default function TechForgePlanet({
             metalness={0.85}
             roughness={0.25}
             emissive={color}
-            emissiveIntensity={hovered ? 0.7 : 0.3}
+            emissiveIntensity={hovered ? 2.5 : 1.6}
           />
         </mesh>
 
-        {/* Stacked horizontal "rack shelf" discs */}
         {[-0.65, -0.22, 0.22, 0.65].map((y, i) => (
           <mesh key={i} position={[0, y, 0]}>
             <cylinderGeometry args={[0.75, 0.75, 0.08, 40]} />
@@ -108,12 +151,11 @@ export default function TechForgePlanet({
               metalness={0.95}
               roughness={0.18}
               emissive={color}
-              emissiveIntensity={0.18}
+              emissiveIntensity={0.5}
             />
           </mesh>
         ))}
 
-        {/* Top emitter spike */}
         <mesh position={[0, 1.1, 0]}>
           <coneGeometry args={[0.18, 0.45, 14]} />
           <meshStandardMaterial
@@ -121,11 +163,10 @@ export default function TechForgePlanet({
             metalness={0.6}
             roughness={0.3}
             emissive={color}
-            emissiveIntensity={0.9}
+            emissiveIntensity={2.0}
           />
         </mesh>
 
-        {/* Bottom base disc */}
         <mesh position={[0, -1.0, 0]}>
           <cylinderGeometry args={[0.9, 1.0, 0.18, 40]} />
           <meshStandardMaterial
@@ -133,14 +174,14 @@ export default function TechForgePlanet({
             metalness={0.9}
             roughness={0.25}
             emissive={color}
-            emissiveIntensity={0.1}
+            emissiveIntensity={0.5}
           />
         </mesh>
       </group>
 
-      {/* 💥 Exploded category rings (expanded only when focused) */}
+      {/* 💥 Exploded category rings — only rendered once data has loaded */}
       <group ref={ringsGroupRef} scale={[0.0001, 0.0001, 0.0001]}>
-        {skillsData.categories.map((cat, i) => (
+        {categories.map((cat, i) => (
           <CategoryAxis
             key={cat.name}
             categoryIndex={i}
@@ -172,7 +213,7 @@ export default function TechForgePlanet({
 
 interface CategoryAxisProps {
   categoryIndex: number;
-  category: { name: string; items: string[] };
+  category: SkillCategory;
   ringRadius: number;
   rotation: [number, number, number];
   color: string;
@@ -197,7 +238,6 @@ function CategoryAxis({
     ] as [number, number, number];
   });
 
-  // Proficiency line endpoint (a fraction of the radial vector to the hovered item)
   let lineEnd: [number, number, number] | null = null;
   let proficiency = 0;
   if (hoveredIdx !== null) {
@@ -209,12 +249,10 @@ function CategoryAxis({
 
   return (
     <group rotation={rotation}>
-      {/* Ring itself */}
       <Torus args={[ringRadius, 0.012, 12, 96]}>
         <meshBasicMaterial color={color} transparent opacity={0.45} />
       </Torus>
 
-      {/* Category label at the top of the ring — always faces camera */}
       <Billboard position={[0, ringRadius + 0.45, 0]}>
         <Text
           fontSize={0.3}
@@ -227,7 +265,6 @@ function CategoryAxis({
         </Text>
       </Billboard>
 
-      {/* Skill items distributed around the ring */}
       {category.items.map((item, idx) => (
         <SkillItem
           key={item}
@@ -239,14 +276,10 @@ function CategoryAxis({
         />
       ))}
 
-      {/* Proficiency vector line — appears only while hovering an item */}
       {lineEnd && (
         <>
           <Line
-            points={[
-              [0, 0, 0],
-              lineEnd,
-            ]}
+            points={[[0, 0, 0], lineEnd]}
             color={color}
             lineWidth={2}
             transparent

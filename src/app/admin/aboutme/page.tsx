@@ -22,7 +22,7 @@ export default function AboutMeAdmin() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [uploadingField, setUploadingField] = useState<string | null>(null);
-  const { setUnsavedPath } = useAdmin();
+  const { setUnsavedPath, isViewMode } = useAdmin();
 
   useEffect(() => {
     const fetchIdentityData = async () => {
@@ -167,18 +167,20 @@ export default function AboutMeAdmin() {
           <h1 className="text-3xl font-serif text-sky-100 dark:text-white">Identity Configuration</h1>
           <p className="text-xs text-sky-400 dark:text-purple-500 tracking-widest mt-2">[ MANAGE ABOUT ME DATA ]</p>
         </div>
-        <button 
-          onClick={handleSave}
-          disabled={isSaving || !hasChanges} 
-          className={`flex items-center gap-2 px-6 py-2.5 font-bold text-xs tracking-widest rounded-sm transition-all shadow-[0_0_15px_rgba(56,189,248,0.2)] dark:shadow-[0_0_15px_rgba(168,85,247,0.2)] ${
-            hasChanges 
-              ? 'bg-sky-500 hover:bg-sky-400 text-[#001320] dark:bg-purple-500 dark:hover:bg-purple-400 dark:text-black cursor-pointer' 
-              : 'bg-white/5 text-sky-200/40 border border-sky-300/20 dark:text-gray-500 dark:border-white/10 cursor-not-allowed'
-          }`}
-        >
-          {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-          {isSaving ? 'SYNCING...' : hasChanges ? 'SAVE CHANGES' : 'UP TO DATE'}
-        </button>
+        {!isViewMode && (
+          <button
+            onClick={handleSave}
+            disabled={isSaving || !hasChanges}
+            className={`flex items-center gap-2 px-6 py-2.5 font-bold text-xs tracking-widest rounded-sm transition-all shadow-[0_0_15px_rgba(56,189,248,0.2)] dark:shadow-[0_0_15px_rgba(168,85,247,0.2)] ${
+              hasChanges
+                ? 'bg-sky-500 hover:bg-sky-400 text-[#001320] dark:bg-purple-500 dark:hover:bg-purple-400 dark:text-black cursor-pointer'
+                : 'bg-white/5 text-sky-200/40 border border-sky-300/20 dark:text-gray-500 dark:border-white/10 cursor-not-allowed'
+            }`}
+          >
+            {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+            {isSaving ? 'SYNCING...' : hasChanges ? 'SAVE CHANGES' : 'UP TO DATE'}
+          </button>
+        )}
       </div>
 
       <form className="space-y-8" onSubmit={handleSave}>
@@ -295,41 +297,38 @@ export default function AboutMeAdmin() {
             
             {/* 🌟 [FIXED จุดที่ 1] เคลียร์ bg-black/20 ออก ใช้เป็นกระจกฝ้าหรูหราแบบโปร่งแสงเพื่อป้องกันเซฟตี้เน็ตครอบทับ */}
             <div className="p-4 rounded-sm min-h-[160px] bg-white/5 border border-sky-300/20 dark:border-white/5">
-              {formData.media.slideshowImages.length === 0 && uploadingField !== 'slideshowImages' ? (
-                <div className="w-full h-32 flex flex-col items-center justify-center text-sky-200/40 dark:text-gray-500">
-                  <ImageIcon size={32} className="opacity-30 mb-2" />
-                  <span className="text-xs font-mono">NO IMAGES IN SLIDESHOW</span>
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-4">
-                  {formData.media.slideshowImages.map((img, idx) => (
-                    /* 🌟 [FIXED จุดที่ 2] เคลียร์ bg-black/60 ออก และใช้เป็นกระจกครอบรูปภาพย่อยให้เข้าคู่กัน */
-                    <div key={idx} className="relative group w-32 h-32 rounded-sm border overflow-hidden bg-white/5 border-sky-300/20 dark:bg-black/60 dark:border-white/10">
-                      <img src={img} alt={`slide-${idx}`} className="w-full h-full object-cover opacity-80 group-hover:opacity-40 transition-opacity" />
-                      <button 
-                        type="button"
-                        onClick={() => handleRemoveSlideshowImage(idx)}
-                        className="absolute inset-0 m-auto w-10 h-10 flex items-center justify-center bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all transform scale-75 group-hover:scale-100 shadow-lg"
-                        title="Remove Image"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  ))}
-
-                  <label className="flex flex-col items-center justify-center w-32 h-32 border-2 border-dashed border-sky-400/30 dark:border-purple-500/30 hover:border-sky-400 dark:hover:border-purple-400 hover:bg-sky-500/10 dark:hover:bg-purple-500/10 text-sky-400 dark:text-purple-500 transition-all rounded-sm cursor-pointer">
-                    <input type="file" accept="image/*" multiple className="hidden" onChange={handleMultiUpload} />
-                    {uploadingField === 'slideshowImages' ? (
-                      <Loader2 size={24} className="animate-spin" />
-                    ) : (
-                      <>
-                        <Plus size={24} className="mb-1" />
-                        <span className="text-[10px] font-mono">ADD IMAGES</span>
-                      </>
-                    )}
-                  </label>
-                </div>
-              )}
+              <div className="flex flex-wrap gap-4">
+                {formData.media.slideshowImages.length === 0 && uploadingField !== 'slideshowImages' && (
+                  <div className="w-full flex flex-col items-center justify-center h-24 text-sky-200/40 dark:text-gray-500">
+                    <ImageIcon size={28} className="opacity-30 mb-2" />
+                    <span className="text-xs font-mono">NO IMAGES IN SLIDESHOW</span>
+                  </div>
+                )}
+                {formData.media.slideshowImages.map((img, idx) => (
+                  <div key={idx} className="relative group w-32 h-32 rounded-sm border overflow-hidden bg-white/5 border-sky-300/20 dark:bg-black/60 dark:border-white/10">
+                    <img src={img} alt={`slide-${idx}`} className="w-full h-full object-cover opacity-80 group-hover:opacity-40 transition-opacity" />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveSlideshowImage(idx)}
+                      className="absolute inset-0 m-auto w-10 h-10 flex items-center justify-center bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all transform scale-75 group-hover:scale-100 shadow-lg"
+                      title="Remove Image"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                ))}
+                <label className="flex flex-col items-center justify-center w-32 h-32 border-2 border-dashed border-sky-400/30 dark:border-purple-500/30 hover:border-sky-400 dark:hover:border-purple-400 hover:bg-sky-500/10 dark:hover:bg-purple-500/10 text-sky-400 dark:text-purple-500 transition-all rounded-sm cursor-pointer">
+                  <input type="file" accept="image/*" multiple className="hidden" onChange={handleMultiUpload} />
+                  {uploadingField === 'slideshowImages' ? (
+                    <Loader2 size={24} className="animate-spin" />
+                  ) : (
+                    <>
+                      <Plus size={24} className="mb-1" />
+                      <span className="text-[10px] font-mono">ADD IMAGES</span>
+                    </>
+                  )}
+                </label>
+              </div>
             </div>
           </div>
         </section>
@@ -343,15 +342,15 @@ export default function AboutMeAdmin() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1">
               <label className="text-xs text-sky-200/60 dark:text-gray-500 uppercase">First Name</label>
-              <input type="text" value={formData.personalInfo.firstName} onChange={(e) => handleChange('personalInfo', 'firstName', e.target.value)} placeholder="Monthol" className="w-full bg-white/5 border border-sky-300/20 dark:border-white/10 p-3 rounded-sm text-sm text-sky-100 dark:text-white focus:border-sky-400 dark:focus:border-purple-500 outline-none transition-all" />
+              <input type="text" value={formData.personalInfo.firstName} onChange={(e) => handleChange('personalInfo', 'firstName', e.target.value)} placeholder="First Name" className="w-full bg-white/5 border border-sky-300/20 dark:border-white/10 p-3 rounded-sm text-sm text-sky-100 dark:text-white focus:border-sky-400 dark:focus:border-purple-500 outline-none transition-all" />
             </div>
             <div className="space-y-1">
               <label className="text-xs text-sky-200/60 dark:text-gray-500 uppercase">Last Name</label>
-              <input type="text" value={formData.personalInfo.lastName} onChange={(e) => handleChange('personalInfo', 'lastName', e.target.value)} placeholder="Sukjinda" className="w-full bg-white/5 border border-sky-300/20 dark:border-white/10 p-3 rounded-sm text-sm text-sky-100 dark:text-white focus:border-sky-400 dark:focus:border-purple-500 outline-none transition-all" />
+              <input type="text" value={formData.personalInfo.lastName} onChange={(e) => handleChange('personalInfo', 'lastName', e.target.value)} placeholder="Last Name" className="w-full bg-white/5 border border-sky-300/20 dark:border-white/10 p-3 rounded-sm text-sm text-sky-100 dark:text-white focus:border-sky-400 dark:focus:border-purple-500 outline-none transition-all" />
             </div>
             <div className="space-y-1">
               <label className="text-xs text-sky-200/60 dark:text-gray-500 uppercase">Nickname</label>
-              <input type="text" value={formData.personalInfo.nickname} onChange={(e) => handleChange('personalInfo', 'nickname', e.target.value)} placeholder="Champ" className="w-full bg-white/5 border border-sky-300/20 dark:border-white/10 p-3 rounded-sm text-sm text-sky-100 dark:text-white focus:border-sky-400 dark:focus:border-purple-500 outline-none transition-all" />
+              <input type="text" value={formData.personalInfo.nickname} onChange={(e) => handleChange('personalInfo', 'nickname', e.target.value)} placeholder="Nickname" className="w-full bg-white/5 border border-sky-300/20 dark:border-white/10 p-3 rounded-sm text-sm text-sky-100 dark:text-white focus:border-sky-400 dark:focus:border-purple-500 outline-none transition-all" />
             </div>
           </div>
 
@@ -412,43 +411,54 @@ export default function AboutMeAdmin() {
             <GraduationCap size={18} className="text-sky-400 dark:text-purple-400" /> Origin (Education)
           </h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-            <div className="md:col-span-8 space-y-1">
-              <label className="text-xs text-sky-200/60 dark:text-gray-500 uppercase">University Name</label>
-              <input type="text" value={formData.education.universityName} onChange={(e) => handleChange('education', 'universityName', e.target.value)} placeholder="KMUTT" className="w-full bg-white/5 border border-sky-300/20 dark:border-white/10 p-3 rounded-sm text-sm text-sky-100 dark:text-white focus:border-sky-400 dark:focus:border-purple-500 outline-none transition-all" />
-            </div>
-            <div className="md:col-span-4 space-y-1">
-              <label className="text-xs text-sky-200/60 dark:text-gray-500 uppercase flex justify-between">
-                University Logo 
-                {formData.education.universityLogo && <span className="text-sky-300 dark:text-purple-500 lowercase">✓ Ok</span>}
-              </label>
-              <label className="w-full bg-white/5 border border-sky-300/20 dark:border-white/10 p-[9px] rounded-sm flex items-center justify-center cursor-pointer hover:border-sky-400 dark:hover:border-purple-500 transition-all text-sky-200/70 dark:text-gray-400 relative overflow-hidden group">
-                 <input type="file" accept="image/*" className="hidden" onChange={(e) => handleSingleUpload(e, 'education', 'universityLogo')} />
-                 {uploadingField === 'universityLogo' ? (
-                   <Loader2 size={16} className="text-sky-400 dark:text-purple-500 animate-spin" />
-                 ) : formData.education.universityLogo ? (
-                   <span className="text-xs text-sky-300 dark:text-purple-300">Change Logo</span>
-                 ) : (
-                   <><UploadCloud size={16} className="mr-2 text-sky-400 dark:text-purple-500" /> <span className="text-xs">Upload Logo</span></>
-                 )}
+          {/* Row 1: Logo + University Name & Major */}
+          <div className="flex gap-5 items-start">
+            <div className="shrink-0 space-y-1">
+              <label className="text-xs text-sky-200/60 dark:text-gray-500 uppercase block">Logo</label>
+              <label className="w-24 h-24 bg-white/5 border-2 border-dashed border-sky-400/30 dark:border-purple-500/30 hover:border-sky-400 dark:hover:border-purple-400 hover:bg-sky-500/10 dark:hover:bg-purple-500/10 rounded-sm flex items-center justify-center cursor-pointer relative overflow-hidden group transition-all">
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => handleSingleUpload(e, 'education', 'universityLogo')} />
+                {uploadingField === 'universityLogo' ? (
+                  <Loader2 size={20} className="text-sky-400 dark:text-purple-500 animate-spin" />
+                ) : formData.education.universityLogo ? (
+                  <>
+                    <img src={formData.education.universityLogo} alt="University Logo" className="absolute inset-0 w-full h-full object-contain p-2 opacity-90 group-hover:opacity-30 transition-opacity" />
+                    <div className="relative z-10 flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity text-white">
+                      <UploadCloud size={16} />
+                      <span className="text-[9px] font-mono">CHANGE</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center text-sky-200/40 dark:text-gray-500 group-hover:text-sky-400 dark:group-hover:text-purple-400 transition-colors">
+                    <UploadCloud size={20} className="mb-1" />
+                    <span className="text-[9px] font-mono">LOGO</span>
+                  </div>
+                )}
               </label>
             </div>
 
-            <div className="md:col-span-6 space-y-1">
-              <label className="text-xs text-sky-200/60 dark:text-gray-500 uppercase">Major / Field of Study</label>
-              <input type="text" value={formData.education.major} onChange={(e) => handleChange('education', 'major', e.target.value)} placeholder="Computer Science" className="w-full bg-white/5 border border-sky-300/20 dark:border-white/10 p-3 rounded-sm text-sm text-sky-100 dark:text-white focus:border-sky-400 dark:focus:border-purple-500 outline-none transition-all" />
-            </div>
-            
-            <div className="md:col-span-3 space-y-1">
-              <label className="text-xs text-sky-200/60 dark:text-gray-500 uppercase">Timeline (Years)</label>
-              <div className="flex items-center gap-2">
-                <input type="text" value={formData.education.timelineStart} onChange={(e) => handleChange('education', 'timelineStart', e.target.value)} placeholder="2020" className="w-full bg-white/5 border border-sky-300/20 dark:border-white/10 p-3 rounded-sm text-sm text-center text-sky-100 dark:text-white focus:border-sky-400 dark:focus:border-purple-500 outline-none transition-all" />
-                <span className="text-sky-200/60 dark:text-gray-500">-</span>
-                <input type="text" value={formData.education.timelineEnd} onChange={(e) => handleChange('education', 'timelineEnd', e.target.value)} placeholder="2024" className="w-full bg-white/5 border border-sky-300/20 dark:border-white/10 p-3 rounded-sm text-sm text-center text-sky-100 dark:text-white focus:border-sky-400 dark:focus:border-purple-500 outline-none transition-all" />
+            <div className="flex-1 space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs text-sky-200/60 dark:text-gray-500 uppercase">University Name</label>
+                <input type="text" value={formData.education.universityName} onChange={(e) => handleChange('education', 'universityName', e.target.value)} placeholder="KMUTT" className="w-full bg-white/5 border border-sky-300/20 dark:border-white/10 p-3 rounded-sm text-sm text-sky-100 dark:text-white focus:border-sky-400 dark:focus:border-purple-500 outline-none transition-all" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-sky-200/60 dark:text-gray-500 uppercase">Major / Field of Study</label>
+                <input type="text" value={formData.education.major} onChange={(e) => handleChange('education', 'major', e.target.value)} placeholder="Computer Science" className="w-full bg-white/5 border border-sky-300/20 dark:border-white/10 p-3 rounded-sm text-sm text-sky-100 dark:text-white focus:border-sky-400 dark:focus:border-purple-500 outline-none transition-all" />
               </div>
             </div>
+          </div>
 
-            <div className="md:col-span-3 space-y-1">
+          {/* Row 2: Timeline + GPAX */}
+          <div className="grid grid-cols-3 gap-4 pt-4 border-t border-sky-300/20 dark:border-white/5">
+            <div className="space-y-1">
+              <label className="text-xs text-sky-200/60 dark:text-gray-500 uppercase">Start Year</label>
+              <input type="text" value={formData.education.timelineStart} onChange={(e) => handleChange('education', 'timelineStart', e.target.value)} placeholder="2020" className="w-full bg-white/5 border border-sky-300/20 dark:border-white/10 p-3 rounded-sm text-sm text-center text-sky-100 dark:text-white focus:border-sky-400 dark:focus:border-purple-500 outline-none transition-all" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-sky-200/60 dark:text-gray-500 uppercase">End Year</label>
+              <input type="text" value={formData.education.timelineEnd} onChange={(e) => handleChange('education', 'timelineEnd', e.target.value)} placeholder="2024" className="w-full bg-white/5 border border-sky-300/20 dark:border-white/10 p-3 rounded-sm text-sm text-center text-sky-100 dark:text-white focus:border-sky-400 dark:focus:border-purple-500 outline-none transition-all" />
+            </div>
+            <div className="space-y-1">
               <label className="text-xs text-sky-200/60 dark:text-gray-500 uppercase">GPAX</label>
               <input type="text" value={formData.education.gpax} onChange={(e) => handleChange('education', 'gpax', e.target.value)} placeholder="3.XX" className="w-full bg-white/5 border border-sky-300/20 dark:border-white/10 p-3 rounded-sm text-sm text-sky-300 dark:text-purple-300 focus:border-sky-400 dark:focus:border-purple-500 outline-none transition-all" />
             </div>

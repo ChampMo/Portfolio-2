@@ -6,15 +6,15 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAppStore } from '@/lib/store/useAppStore';
 import { useThemeStore } from '@/lib/store/useThemeStore';
-import { 
-  Hexagon, 
-  Code2, 
-  Cpu, 
-  Clock, 
-  FolderGit2, 
+import {
+  Hexagon,
+  Code2,
+  Cpu,
+  Clock,
+  FolderGit2,
   PanelRightOpen,
   PanelRightClose,
-  Orbit 
+  Orbit,
 } from 'lucide-react';
 
 const warpCoordinates = [
@@ -72,9 +72,11 @@ export default function RadarHud() {
   const isLight = theme === 'light'; 
 
   const pathname = usePathname();
-  const router = useRouter(); 
+  const router = useRouter();
 
   const [isMenuOpen, setIsMenuOpen] = useState(true);
+
+  if (pathname.startsWith('/admin')) return null;
 
   return (
     <AnimatePresence>
@@ -192,7 +194,7 @@ export default function RadarHud() {
                   whileHover={{ scale: 1.05 }}
                   onClick={toggleSummaryMode}
                   className={`pointer-events-auto flex items-center gap-3 px-4 py-2 border rounded-sm font-mono text-xs tracking-wider transition-all ${
-                    isSummaryMode 
+                    isSummaryMode
                       ? (isLight
                           ? 'bg-sky-950 text-sky-300 border-sky-950 shadow-[0_0_10px_rgba(15,23,42,0.3)]'
                           : 'bg-cyan-500 text-black border-cyan-500 shadow-[0_0_15px_rgba(34,211,238,0.5)]')
@@ -204,6 +206,7 @@ export default function RadarHud() {
                   {isSummaryMode ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
                   <span>{isSummaryMode ? 'CLOSE SLATE' : 'DATA SLATE'}</span>
                 </motion.button>
+
               </motion.div>
             )}
           </AnimatePresence>

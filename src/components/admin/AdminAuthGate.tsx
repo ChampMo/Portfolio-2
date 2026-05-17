@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useState, useCallback, ReactNode, FormEvent } from 'react';
-import { ShieldCheck, KeyRound, Mail, Lock, ArrowLeft, Hexagon, Loader2 } from 'lucide-react';
+import { ShieldCheck, KeyRound, Mail, Lock, ArrowLeft, Hexagon, Loader2, Eye } from 'lucide-react';
+import { useAdmin } from '@/context/AdminContext';
 
 type Stage = 'loading' | 'login' | 'request-otp' | 'enter-otp' | 'reset' | 'authed';
 
 export default function AdminAuthGate({ children }: { children: ReactNode }) {
+  const { isViewMode, setViewMode } = useAdmin();
   const [stage, setStage] = useState<Stage>('loading');
   const [hasPasscode, setHasPasscode] = useState(false);
 
@@ -179,7 +181,7 @@ export default function AdminAuthGate({ children }: { children: ReactNode }) {
     ? Math.max(0, Math.ceil((otpExpiresAt - now) / 1000))
     : 0;
 
-  if (stage === 'authed') return <>{children}</>;
+  if (stage === 'authed' || isViewMode) return <>{children}</>;
 
   return (
     <div className="fixed inset-0 z-200 flex items-center justify-center bg-gray-950 text-gray-300 font-mono px-4">
@@ -252,6 +254,20 @@ export default function AdminAuthGate({ children }: { children: ReactNode }) {
               className="w-full text-[11px] text-gray-500 hover:text-cyan-300 tracking-widest uppercase pt-2"
             >
               ลืมรหัส / เปลี่ยนรหัส →
+            </button>
+
+            <div className="relative flex items-center pt-1">
+              <div className="flex-1 h-px bg-white/5" />
+              <span className="mx-3 text-[10px] text-gray-600 tracking-widest">OR</span>
+              <div className="flex-1 h-px bg-white/5" />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setViewMode(true)}
+              className="w-full flex items-center justify-center gap-2 bg-purple-500/5 hover:bg-purple-500/15 border border-purple-500/20 hover:border-purple-400/50 text-purple-300 hover:text-purple-200 py-3 rounded-sm tracking-[0.25em] uppercase text-xs transition-all"
+            >
+              <Eye size={14} /> BROWSE AS VISITOR
             </button>
           </form>
         )}

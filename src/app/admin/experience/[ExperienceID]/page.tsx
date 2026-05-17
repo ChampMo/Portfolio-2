@@ -29,7 +29,7 @@ export default function SingleExperiencePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   
-  const { setUnsavedPath } = useAdmin();
+  const { setUnsavedPath, isViewMode } = useAdmin();
   const { showToast } = useToast();
   const theme = useThemeStore((s) => s.theme); // 🌟 2. เรียกใช้งานสถานะธีม
   const isLight = theme === 'light';
@@ -141,18 +141,20 @@ export default function SingleExperiencePage() {
         <button onClick={handleBackToList} className="flex items-center gap-2 text-sky-200/50 hover:text-cyan-500 transition-colors text-xs font-mono tracking-widest dark:text-gray-400">
           <ArrowLeft size={16} /> BACK TO ORBIT
         </button>
-        <button 
-          onClick={handleSaveExperience}
-          disabled={isSaving || !hasChanges}
-          className={`flex items-center gap-2 px-6 py-2 font-bold text-xs tracking-widest rounded-sm transition-all border ${
-            hasChanges 
-              ? 'bg-cyan-500 border-cyan-400 text-[#001320] shadow-[0_0_15px_rgba(34,211,238,0.3)] cursor-pointer' 
-              : 'bg-white/5 border-sky-300/20 text-sky-200/40 dark:border-white/10 dark:text-gray-500 cursor-not-allowed'
-          }`}
-        >
-          {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-          {isSaving ? 'SAVING...' : hasChanges ? 'COMMIT RECORD' : 'UP TO DATE'}
-        </button>
+        {!isViewMode && (
+          <button
+            onClick={handleSaveExperience}
+            disabled={isSaving || !hasChanges}
+            className={`flex items-center gap-2 px-6 py-2 font-bold text-xs tracking-widest rounded-sm transition-all border ${
+              hasChanges
+                ? 'bg-cyan-500 border-cyan-400 text-[#001320] shadow-[0_0_15px_rgba(34,211,238,0.3)] cursor-pointer'
+                : 'bg-white/5 border-sky-300/20 text-sky-200/40 dark:border-white/10 dark:text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+            {isSaving ? 'SAVING...' : hasChanges ? 'COMMIT RECORD' : 'UP TO DATE'}
+          </button>
+        )}
       </div>
 
       {/* CORE FORM MATRIX */}

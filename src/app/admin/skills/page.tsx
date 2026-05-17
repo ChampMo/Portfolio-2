@@ -32,7 +32,7 @@ export default function SkillsAdmin() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   
-  const { setUnsavedPath } = useAdmin();
+  const { setUnsavedPath, isViewMode } = useAdmin();
   const { showToast } = useToast(); 
 
   // 📡 โหลดข้อมูลจาก Database เมื่อเปิดหน้า
@@ -141,18 +141,20 @@ export default function SkillsAdmin() {
           <h1 className="text-3xl font-serif text-sky-100 dark:text-white">Tech Forge Configuration</h1>
           <p className="text-xs text-emerald-400 dark:text-emerald-500 tracking-widest mt-2">[ MANAGE SKILLS & ARSENAL ]</p>
         </div>
-        <button 
-          onClick={handleSave}
-          disabled={isSaving || !hasChanges} 
-          className={`flex items-center gap-2 px-6 py-2.5 font-bold text-xs tracking-widest rounded-sm transition-all border shadow-[0_0_15px_rgba(16,185,129,0.2)] ${
-            hasChanges 
-              ? 'bg-emerald-500 border-emerald-400 text-[#001320] dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:text-black cursor-pointer' 
-              : 'bg-white/5 text-sky-200/40 border-sky-300/20 dark:text-gray-500 dark:border-white/10 cursor-not-allowed'
-          }`}
-        >
-          {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-          {isSaving ? 'SYNCING...' : hasChanges ? 'SAVE CHANGES' : 'UP TO DATE'}
-        </button>
+        {!isViewMode && (
+          <button
+            onClick={handleSave}
+            disabled={isSaving || !hasChanges}
+            className={`flex items-center gap-2 px-6 py-2.5 font-bold text-xs tracking-widest rounded-sm transition-all border shadow-[0_0_15px_rgba(16,185,129,0.2)] ${
+              hasChanges
+                ? 'bg-emerald-500 border-emerald-400 text-[#001320] dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:text-black cursor-pointer'
+                : 'bg-white/5 text-sky-200/40 border-sky-300/20 dark:text-gray-500 dark:border-white/10 cursor-not-allowed'
+            }`}
+          >
+            {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+            {isSaving ? 'SYNCING...' : hasChanges ? 'SAVE CHANGES' : 'UP TO DATE'}
+          </button>
+        )}
       </div>
 
       <form className="space-y-8" onSubmit={handleSave}>

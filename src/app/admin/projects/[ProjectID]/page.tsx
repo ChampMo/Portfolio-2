@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { 
-  Save, ArrowLeft, Image as ImageIcon, Link as LinkIcon, 
-  Type, AlignLeft, UploadCloud, Tag as TagIcon, X, Loader2, Trash2, Plus, Columns3
+import {
+  Save, ArrowLeft, Image as ImageIcon, Link as LinkIcon,
+  Type, AlignLeft, UploadCloud, Tag as TagIcon, X, Loader2, Trash2, Plus, Columns3, Eye
 } from 'lucide-react';
 import { uploadToCloudinary } from '@/lib/utils/uploadImage';
 import { useAdmin } from '@/context/AdminContext';
@@ -16,6 +16,7 @@ export type BlockType = 'heading' | 'paragraph' | 'link' | 'gallery';
 export interface GalleryContent {
   title: string;
   images: string[];
+  height?: number;
 }
 
 export interface ContentBlock {
@@ -57,7 +58,7 @@ export default function SingleProjectPage() {
   const [isSavingProject, setIsSavingProject] = useState(false);
   const [uploadingField, setUploadingField] = useState<string | null>(null);
   
-  const { setUnsavedPath } = useAdmin();
+  const { setUnsavedPath, isViewMode } = useAdmin();
   const { showToast } = useToast();
   const theme = useThemeStore((s) => s.theme); // 🌟 2. ดึงสถานะ Light/Dark
   const isLight = theme === 'light';
@@ -274,6 +275,24 @@ export default function SingleProjectPage() {
     });
   };
 
+  const handleUpdateGalleryHeight = (blockId: string, newHeight: number) => {
+    setEditingProject(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        blocks: prev.blocks.map(b => {
+          if (b.id === blockId) {
+            const currentContent = typeof b.content === 'object' && !Array.isArray(b.content)
+              ? b.content as GalleryContent
+              : { title: '', images: [], height: 200 };
+            return { ...b, content: { ...currentContent, height: Math.max(80, Math.min(800, newHeight)) } };
+          }
+          return b;
+        })
+      };
+    });
+  };
+
   const handleUpdateGalleryTitle = (blockId: string, newTitle: string) => {
     setEditingProject(prev => {
       if (!prev) return prev;
@@ -294,7 +313,7 @@ export default function SingleProjectPage() {
   };
 
   const addBlock = (type: BlockType) => {
-    const initialContent = type === 'gallery' ? { title: '', images: [] } : '';
+    const initialContent = type === 'gallery' ? { title: '', images: [], height: 200 } : '';
     const newBlock: ContentBlock = { id: Date.now().toString(), type, content: initialContent };
     setEditingProject(prev => prev ? ({ ...prev, blocks: [...prev.blocks, newBlock] }) : prev);
   };
@@ -354,18 +373,20 @@ export default function SingleProjectPage() {
         <button onClick={handleBackToList} className="flex items-center gap-2 text-sky-200/50 hover:text-fuchsia-400 transition-colors text-xs font-mono tracking-widest">
           <ArrowLeft size={16} /> BACK TO ORBIT
         </button>
-        <button 
-          onClick={handleSaveProject}
-          disabled={isSavingProject || !hasChanges}
-          className={`flex items-center gap-2 px-6 py-2 font-bold text-xs tracking-widest rounded-sm transition-all border ${
-            hasChanges 
-              ? 'bg-fuchsia-500 border-fuchsia-400 text-[#001320] shadow-[0_0_15px_rgba(217,70,239,0.3)] cursor-pointer' 
-              : 'bg-white/5 border-sky-300/20 text-sky-200/40 dark:border-white/10 cursor-not-allowed'
-          }`}
-        >
-          {isSavingProject ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-          {isSavingProject ? 'SAVING...' : hasChanges ? 'COMMIT CONSTELLATION' : 'UP TO DATE'}
-        </button>
+        {!isViewMode && (
+          <button
+            onClick={handleSaveProject}
+            disabled={isSavingProject || !hasChanges}
+            className={`flex items-center gap-2 px-6 py-2 font-bold text-xs tracking-widest rounded-sm transition-all border ${
+              hasChanges
+                ? 'bg-fuchsia-500 border-fuchsia-400 text-[#001320] shadow-[0_0_15px_rgba(217,70,239,0.3)] cursor-pointer'
+                : 'bg-white/5 border-sky-300/20 text-sky-200/40 dark:border-white/10 cursor-not-allowed'
+            }`}
+          >
+            {isSavingProject ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+            {isSavingProject ? 'SAVING...' : hasChanges ? 'COMMIT CONSTELLATION' : 'UP TO DATE'}
+          </button>
+        )}
       </div>
 
       {/* CORE INFO FIELD */}
@@ -483,36 +504,80 @@ export default function SingleProjectPage() {
               </div>
             )}
 
-            {block.type === 'gallery' && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] text-fuchsia-400 font-mono tracking-widest uppercase">Gallery Title (ชื่อกลุ่มรูปภาพ)</label>
-                  <input 
-                    type="text" 
-                    value={(block.content as GalleryContent)?.title || ''} 
-                    onChange={(e) => handleUpdateGalleryTitle(block.id, e.target.value)} 
-                    placeholder="e.g. System Architecture Screenshots (Optional)" 
-                    className="w-full bg-fuchsia-950/10 border border-fuchsia-500/20 p-3 rounded-sm text-sm font-bold text-white focus:border-fuchsia-500 outline-none transition-all" 
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-[10px] text-fuchsia-400 font-mono tracking-widest uppercase">Images</label>
-                  <div className="flex flex-wrap gap-4 p-4 border rounded-sm bg-white/5 border-sky-300/10 dark:bg-black/30 dark:border-white/5">
-                    {((block.content as GalleryContent)?.images || (Array.isArray(block.content) ? block.content : [])).map((img: string, idx: number) => (
-                      <div key={idx} className="w-24 h-24 bg-white/5 border rounded-sm relative group border-sky-300/10 dark:bg-black/60 dark:border-white/10">
-                        <img src={img} alt="gallery" className="w-full h-full object-cover opacity-80 group-hover:opacity-40 transition-opacity" />
-                        <button onClick={() => handleRemoveGalleryImage(block.id, idx)} className="absolute inset-0 m-auto w-8 h-8 flex items-center justify-center bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all transform scale-75 group-hover:scale-100"><Trash2 size={14} /></button>
+            {block.type === 'gallery' && (() => {
+              const gc = block.content as GalleryContent;
+              const images = gc?.images || [];
+              const height = gc?.height ?? 200;
+              return (
+                <div className="space-y-4">
+                  {/* Title + Height row */}
+                  <div className="flex gap-3 items-end">
+                    <div className="flex-1 space-y-2">
+                      <label className="text-[10px] text-fuchsia-400 font-mono tracking-widest uppercase">Gallery Title (ชื่อกลุ่มรูปภาพ)</label>
+                      <input
+                        type="text"
+                        value={gc?.title || ''}
+                        onChange={(e) => handleUpdateGalleryTitle(block.id, e.target.value)}
+                        placeholder="e.g. System Architecture Screenshots (Optional)"
+                        className="w-full bg-white/5 border border-sky-300/20 dark:bg-black/40 dark:border-white/10 p-3 rounded-sm text-sm text-sky-100 dark:text-white focus:border-fuchsia-500 outline-none transition-all"
+                      />
+                    </div>
+                    <div className="w-32 space-y-2">
+                      <label className="text-[10px] text-fuchsia-400 font-mono tracking-widest uppercase">Height (px)</label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min={80}
+                          max={800}
+                          step={10}
+                          value={height}
+                          onChange={(e) => handleUpdateGalleryHeight(block.id, Number(e.target.value))}
+                          className="w-full bg-white/5 border border-sky-300/20 dark:bg-black/40 dark:border-white/10 p-3 pr-9 rounded-sm text-sm font-bold text-sky-100 dark:text-white focus:border-fuchsia-500 outline-none transition-all text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-fuchsia-400/60 font-mono pointer-events-none">px</span>
                       </div>
-                    ))}
-                    <label className="w-24 h-24 border border-dashed border-fuchsia-500/50 hover:bg-fuchsia-500/10 rounded-sm flex flex-col items-center justify-center text-fuchsia-400 transition-all cursor-pointer">
-                      <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleGalleryUpload(e, block.id)} />
-                      {uploadingField === block.id ? <Loader2 size={20} className="animate-spin" /> : <><Plus size={20} /><span className="text-[8px] font-mono mt-1">ADD IMAGE</span></>}
-                    </label>
+                    </div>
                   </div>
+
+                  {/* Image thumbnail grid */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] text-fuchsia-400 font-mono tracking-widest uppercase">Images</label>
+                    <div className="flex flex-wrap gap-4 p-4 border rounded-sm bg-white/5 border-sky-300/10 dark:bg-black/30 dark:border-white/5">
+                      {images.map((img: string, idx: number) => (
+                        <div key={idx} className="w-24 h-24 bg-white/5 border rounded-sm relative group border-sky-300/10 dark:bg-black/60 dark:border-white/10">
+                          <img src={img} alt="gallery" className="w-full h-full object-cover opacity-80 group-hover:opacity-40 transition-opacity" />
+                          <button onClick={() => handleRemoveGalleryImage(block.id, idx)} className="absolute inset-0 m-auto w-8 h-8 flex items-center justify-center bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all transform scale-75 group-hover:scale-100"><Trash2 size={14} /></button>
+                        </div>
+                      ))}
+                      <label className="w-24 h-24 border border-dashed border-fuchsia-500/50 hover:bg-fuchsia-500/10 rounded-sm flex flex-col items-center justify-center text-fuchsia-400 transition-all cursor-pointer">
+                        <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleGalleryUpload(e, block.id)} />
+                        {uploadingField === block.id ? <Loader2 size={20} className="animate-spin" /> : <><Plus size={20} /><span className="text-[8px] font-mono mt-1">ADD IMAGE</span></>}
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Live preview strip */}
+                  {images.length > 0 && (
+                    <div className="space-y-2">
+                      <label className="text-[10px] text-fuchsia-400 font-mono tracking-widest uppercase flex items-center gap-1.5">
+                        <Eye size={11} /> Preview — แสดงที่ความสูง {height}px
+                      </label>
+                      <div className="flex gap-3 overflow-x-auto p-4 border rounded-sm bg-black/50 border-fuchsia-500/20 custom-scrollbar">
+                        {images.map((img: string, idx: number) => (
+                          <img
+                            key={idx}
+                            src={img}
+                            alt={`preview-${idx}`}
+                            style={{ height: `${height}px` }}
+                            className="object-cover rounded-sm border border-white/10 shrink-0 max-w-none"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
         ))}
       </div>

@@ -33,3 +33,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to update identity matrix' }, { status: 500 });
   }
 }
+
+export const dynamic = 'force-dynamic'; // 🌟 บอก Next.js ว่าหน้าคลังข้อมูลนี้ไม่ต้องพยายามคอมไพล์ตอน Build ให้รอดึงแบบเรียลไทม์เท่านั้น

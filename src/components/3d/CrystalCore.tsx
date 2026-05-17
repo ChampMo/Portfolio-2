@@ -5,46 +5,66 @@ import { Float, MeshTransmissionMaterial, Billboard, useCursor } from '@react-th
 import * as THREE from 'three';
 import gsap from 'gsap';
 import { useRouter, usePathname } from 'next/navigation';
-// 🌟 เพิ่ม useFrame เข้ามาจาก @react-three/fiber
-import { useFrame, type ThreeEvent } from '@react-three/fiber'; 
+import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { useAppStore } from '@/lib/store/useAppStore';
 
 const CORE_FOCUS_PATH = '/about';
 
 export default function CrystalCore() {
   const meshRef = useRef<THREE.Mesh>(null);
-  const idleRef = useRef<THREE.Group>(null); // 🌟 เพิ่ม Ref สำหรับควบคุมการหมุนตอนปกติ
+  const idleRef = useRef<THREE.Group>(null);
+  const glowInnerRef = useRef<THREE.Mesh>(null);
+  const glowOuterRef = useRef<THREE.Mesh>(null);
+  const glowHaloRef = useRef<THREE.Mesh>(null); // 🌟 [ADDED]: เพิ่ม Ref สำหรับชั้นที่ 3
+  const lightRef = useRef<THREE.PointLight>(null);
+  
   const [hovered, setHovered] = useState(false);
+  const [glowTexture, setGlowTexture] = useState<THREE.Texture | null>(null);
+  const [myPicture, setMyPicture] = useState<THREE.Texture | null>(null);
+  const [coreImageUrl, setCoreImageUrl] = useState<string | null>(null);
+  
   const toggleSummaryMode = useAppStore((state) => state.toggleSummaryMode);
   const router = useRouter();
   const pathname = usePathname();
   const isFocused = pathname === CORE_FOCUS_PATH;
-
-  const [myPicture, setMyPicture] = useState<THREE.Texture | null>(null);
   const spinTween = useRef<gsap.core.Tween | null>(null);
 
   useCursor(hovered);
 
-  // 🔄 1. ตอนปกติ: สั่งให้กลุ่มคริสตัลหมุนช้าๆ ไปเรื่อยๆ 
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
     if (idleRef.current) {
-      // delta คือเวลาที่ใช้ในแต่ละเฟรม คูณด้วยความเร็ว (0.2 กำลังหมุนเอื่อยๆ สวยงามครับ)
-      idleRef.current.rotation.y += delta * 0.2; 
+      idleRef.current.rotation.y += delta * 0.2;
+    }
+    const t = state.clock.elapsedTime;
+
+    if (lightRef.current) {
+      lightRef.current.intensity = (hovered ? 28 : 14) + Math.sin(t * 2.1) * 4;
+    }
+    
+    // Animate glow opacity directly on material — no state re-render
+    if (glowInnerRef.current) {
+      (glowInnerRef.current.material as THREE.MeshBasicMaterial).opacity =
+        (hovered ? 0.85 : 0.65) + Math.sin(t * 1.5) * 0.08;
+    }
+    if (glowOuterRef.current) {
+      (glowOuterRef.current.material as THREE.MeshBasicMaterial).opacity =
+        (hovered ? 0.45 : 0.3) + Math.sin(t * 0.8 + 1.2) * 0.05;
+    }
+    // 🌟 [ADDED]: อนิเมชันการเต้นของแสงชั้นที่ 3 (จางสุด เต้นช้าสุด)
+    if (glowHaloRef.current) {
+      (glowHaloRef.current.material as THREE.MeshBasicMaterial).opacity =
+        (hovered ? 0.1 : 0.05) + Math.sin(t * 1 + 2.4) * 0.05;
     }
   });
 
-  // 🌀 2. ตอน Hover: สั่งให้ตัว Mesh ด้านในหมุนเพิ่มอีก "ครึ่งรอบ" (Math.PI)
   const handlePointerOver = () => {
     setHovered(true);
     const mesh = meshRef.current;
     if (!mesh) return;
     if (spinTween.current && spinTween.current.isActive()) return;
-    
-    // เปลี่ยนจาก Math.PI * 2 (1 รอบ) เป็น Math.PI (ครึ่งรอบ = 180 องศา)
-    const target = mesh.rotation.y + Math.PI; 
     spinTween.current = gsap.to(mesh.rotation, {
-      y: target,
-      duration: 1.2, // ปรับความเร็วในการตวัดหมุนตรงนี้
+      y: mesh.rotation.y + Math.PI,
+      duration: 1.2,
       ease: 'power2.out',
     });
   };
@@ -61,40 +81,115 @@ export default function CrystalCore() {
   };
 
   useEffect(() => {
+    const size = 256;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d')!;
+    const c = size / 2;
+    const grad = ctx.createRadialGradient(c, c, 0, c, c, c);
+    grad.addColorStop(0,    'rgba(240, 171, 252, 1)');
+    grad.addColorStop(0.25, 'rgba(192, 132, 252, 0.7)');
+    grad.addColorStop(0.6,  'rgba(124,  58, 237, 0.2)');
+    grad.addColorStop(1,    'rgba( 91,  33, 182, 0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, size, size);
+    setGlowTexture(new THREE.CanvasTexture(canvas));
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/aboutme')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        const url = d?.media?.coreImage;
+        setCoreImageUrl(url || null);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const url = coreImageUrl || '/textures/core_img.png';
     const loader = new THREE.TextureLoader();
     loader.load(
-      '/textures/core_img.png',
+      url,
       (texture) => {
         texture.colorSpace = THREE.SRGBColorSpace;
         setMyPicture(texture);
       },
       undefined,
-      (err) => console.error("Texture Load Error:", err)
+      (err) => console.error('Texture Load Error:', err)
     );
-  }, []);
+  }, [coreImageUrl]);
 
   return (
     <Float speed={1.5} rotationIntensity={0.2} floatIntensity={1.5}>
-      
-      {/* 🌟 ครอบด้วย group เพื่อแยก Layer สำหรับการหมุนสภาวะปกติ */}
+
+      {/* Lights */}
+      <pointLight ref={lightRef} position={[0, 0, 0]} intensity={14} distance={14} color="#c084fc" />
+      <pointLight position={[0, 0, 2]} intensity={4} distance={8} color="#818cf8" />
+      <pointLight position={[0, 2, -1]} intensity={3} distance={7} color="#f0abfc" />
+
+      {glowTexture && (
+        <>
+          <Billboard follow={true} lockX={false} lockY={false} lockZ={false}>
+            <mesh ref={glowInnerRef} scale={6}>
+              <planeGeometry args={[1, 1]} />
+              <meshBasicMaterial
+                map={glowTexture}
+                transparent
+                opacity={0.65}
+                blending={THREE.AdditiveBlending}
+                depthWrite={false}
+              />
+            </mesh>
+          </Billboard>
+
+          <Billboard follow={true} lockX={false} lockY={false} lockZ={false}>
+            <mesh ref={glowOuterRef} scale={11}>
+              <planeGeometry args={[1, 1]} />
+              <meshBasicMaterial
+                map={glowTexture}
+                transparent
+                opacity={0.28}
+                blending={THREE.AdditiveBlending}
+                depthWrite={false}
+              />
+            </mesh>
+          </Billboard>
+
+          {/* 🌟 [ADDED]: ชั้นที่ 3 ออร่าวงนอกสุด ปรับสเกลใหญ่เป็น 18 และเริ่มความสว่างที่ 0.12 */}
+          <Billboard follow={true} lockX={false} lockY={false} lockZ={false}>
+            <mesh ref={glowHaloRef} scale={18}>
+              <planeGeometry args={[1, 1]} />
+              <meshBasicMaterial
+                map={glowTexture}
+                transparent
+                opacity={0.12}
+                blending={THREE.AdditiveBlending}
+                depthWrite={false}
+              />
+            </mesh>
+          </Billboard>
+        </>
+      )}
+
+      {/* Crystal shell */}
       <group ref={idleRef}>
-        {/* 1. เปลือกนอก: คริสตัลใส */}
         <mesh
           ref={meshRef}
           onPointerOver={handlePointerOver}
           onPointerOut={handlePointerOut}
           onClick={handleClick}
         >
-          <icosahedronGeometry args={[2.0, 0]} /> 
-          
+          <icosahedronGeometry args={[2.0, 0]} />
           <MeshTransmissionMaterial
             backside
             backsideThickness={1}
-            thickness={0.5}
+            thickness={0.3}
             roughness={0.02}
             transmission={1}
-            ior={1.1}
-            chromaticAberration={0.2}
+            ior={1.5}
+            chromaticAberration={0.1}
             anisotropy={0.3}
             depthWrite={true}
             color={hovered ? "#e7d0ff" : "#e2c6ff"}
@@ -103,27 +198,20 @@ export default function CrystalCore() {
         </mesh>
       </group>
 
-      {/* 3. แกนพลังงานด้านใน (The Soul) ไม่ได้อยู่ใน group เพื่อไม่ให้หมุนตามเปลือกคริสตัล */}
-      <Billboard
-        follow={true}
-        lockX={false}
-        lockY={false}
-        lockZ={false}
-        position={[0, 0, 0]}
-      >
-        <mesh scale={hovered ? 2 : 1.8}>
-          <planeGeometry args={[1, 1]} /> 
-          
+      {/* Profile picture */}
+      <Billboard follow={true} lockX={false} lockY={false} lockZ={false} position={[0, 0, 0.4]}>
+        <mesh scale={hovered ? 2 : 1.8} renderOrder={5}>
+          <planeGeometry args={[1, 1]} />
           {myPicture ? (
-            <meshBasicMaterial 
-              map={myPicture} 
-              transparent={true} 
-              side={THREE.DoubleSide} 
-              depthWrite={true}
-              color={hovered ? "#ffffff" : "#d8b4fe"} 
+            <meshBasicMaterial
+              map={myPicture}
+              transparent={true}
+              side={THREE.DoubleSide}
+              depthWrite={false}
+              color="#ffffff"
             />
           ) : (
-            <meshBasicMaterial color="#d8b4fe" wireframe={true} depthWrite={true} />
+            <meshBasicMaterial color="#d8b4fe" wireframe={true} depthWrite={false} />
           )}
         </mesh>
       </Billboard>

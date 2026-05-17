@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePathname } from 'next/navigation';
+import Link from 'next/link';
 import { useAppStore } from '@/lib/store/useAppStore';
-import { useThemeStore } from '@/lib/store/useThemeStore'; // 🌟 1. นำเข้า useThemeStore
+import { useThemeStore } from '@/lib/store/useThemeStore';
 import {
   Hexagon,
   Code2,
@@ -12,6 +13,9 @@ import {
   Clock,
   FolderGit2,
   Orbit,
+  ChevronUp,
+  ChevronDown,
+  ShieldCheck,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -24,16 +28,19 @@ type Sector = {
   name: string;
   brief: string;
   icon: LucideIcon;
-  accent: string;       
-  accentBorder: string; 
+  accent: string;
+  accentBorder: string;
   stats: Stat[];
 };
 
 export default function SectorHud() {
   const isSystemBooted = useAppStore((s) => s.isSystemBooted);
-  const theme = useThemeStore((s) => s.theme); // 🌟 2. เรียกใช้งานสถานะธีม
+  const theme = useThemeStore((s) => s.theme);
   const isLight = theme === 'light';
   const pathname = usePathname() ?? '/';
+
+  // 🌟 State สำหรับจัดเก็บการเปิด/ปิดแผงข้อมูล
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const [liveStats, setLiveStats] = useState({
     projectsCount: 0,
@@ -109,7 +116,6 @@ export default function SectorHud() {
     fetchLiveTelemetry();
   }, [isSystemBooted]);
 
-  // 🌟 3. ปรับแต่งคู่สีของแต่ละ Sector ให้รองรับธีมอวกาศสว่างน้ำเงินเข้ม (#001320) สว่างชัด ไม่จม
   const SECTORS: Record<string, Sector> = {
     '/': {
       code: 'SECTOR-00',
@@ -200,6 +206,8 @@ export default function SectorHud() {
   const sector = SECTORS[pathname] ?? SECTORS['/'];
   const Icon = sector.icon;
 
+  if (pathname.startsWith('/admin')) return null;
+
   return (
     <AnimatePresence>
       {isSystemBooted && (
@@ -210,6 +218,7 @@ export default function SectorHud() {
           transition={{ duration: 0.8, delay: 0.5, ease: 'easeOut' }}
           className="fixed left-6 top-6 z-40 pointer-events-none"
         >
+          <div className="flex items-start gap-2">
           <AnimatePresence mode="wait">
             <motion.div
               key={pathname}
@@ -217,15 +226,13 @@ export default function SectorHud() {
               animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
               exit={{ opacity: 0, y: -8, filter: 'blur(6px)' }}
               transition={{ duration: 0.35, ease: 'easeOut' }}
-              /* 🌟 [FIXED] เปลี่ยนโครงสร้างพื้นหลังและการ์ดหลักตามสั่ง */
               className={`pointer-events-auto w-70 backdrop-blur-md border rounded-sm overflow-hidden transition-all duration-300 ${
-                isLight 
-                  ? 'bg-white/10 border-sky-300/40 text-sky-300 shadow-md shadow-sky-950/40' 
+                isLight
+                  ? 'bg-white/10 border-sky-300/40 text-sky-300 shadow-md shadow-sky-950/40'
                   : `bg-black/55 ${sector.accentBorder} shadow-lg shadow-black/50 dark:shadow-[0_0_20px_rgba(34,211,238,0.08)]`
               }`}
             >
-              {/* Header strip */}
-              {/* 🌟 [FIXED] เคลียร์สีพื้นหลังขาวทึบออก ใช้โครงสร้างโปร่งแสงใสๆ */}
+              {/* Header strip - โชว์ตลอดเวลา */}
               <div className={`flex items-center gap-3 px-4 py-2.5 border-b ${
                 isLight ? 'border-sky-300/20 bg-white/5' : 'border-b border-slate-300/40 dark:border-white/10 bg-slate-50/50 dark:bg-white/3'
               }`}>
@@ -239,41 +246,85 @@ export default function SectorHud() {
                 </span>
               </div>
 
-              {/* Title + brief */}
-              <div className={`px-4 py-3 border-b ${isLight ? 'border-sky-300/20' : 'border-slate-300/40 dark:border-white/10'}`}>
-                <h2 className={`font-mono text-base tracking-[0.2em] ${sector.accent}`}>
-                  {sector.name}
-                </h2>
-                {/* 🌟 [FIXED] ตัวหนังสือบรรยายสีฟ้าอ่อน นุ่มนวล สบายตา */}
-                <p className={`mt-1 text-[11px] leading-relaxed font-sans ${isLight ? 'text-sky-200/80' : 'text-slate-600 dark:text-gray-400'}`}>
-                  {sector.brief}
-                </p>
-              </div>
-
-              {/* Stat grid */}
-              <div className="grid grid-cols-2">
-                {sector.stats.map((stat, i) => (
-                  <div
-                    key={stat.label}
-                    className={`px-4 py-2.5 ${i % 2 === 0 ? 'border-r' : ''} ${i < 2 ? 'border-b' : ''} ${
-                      isLight ? 'border-sky-300/20' : 'border-slate-300/40 dark:border-white/5'
-                    }`}
+              {/* 🌟 ห่อเนื้อหาส่วนที่ย่อได้ด้วย AnimatePresence เพื่อทำความสูงแบบ Auto */}
+              <AnimatePresence initial={false}>
+                {!isCollapsed && (
+                  <motion.div
+                    key="hud-content"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.3, ease: 'easeInOut' }}
+                    className="overflow-hidden"
                   >
-                    {/* 🌟 [FIXED] หัวข้อสถิติสีฟ้าจาง */}
-                    <p className={`font-mono text-[9px] tracking-[0.2em] mb-0.5 ${isLight ? 'text-sky-400/60' : 'text-slate-500 dark:text-gray-500'}`}>
-                      {stat.label}
-                    </p>
-                    <p className={`font-mono text-xs tracking-wider ${sector.accent}`}>
-                      {stat.value}
-                    </p>
-                  </div>
-                ))}
+                    {/* Title + brief */}
+                    <div className={`px-4 py-3 border-b ${isLight ? 'border-sky-300/20' : 'border-slate-300/40 dark:border-white/10'}`}>
+                      <h2 className={`font-mono text-base tracking-[0.2em] ${sector.accent}`}>
+                        {sector.name}
+                      </h2>
+                      <p className={`mt-1 text-[11px] leading-relaxed font-sans ${isLight ? 'text-sky-200/80' : 'text-slate-600 dark:text-gray-400'}`}>
+                        {sector.brief}
+                      </p>
+                    </div>
+
+                    {/* Stat grid */}
+                    <div className="grid grid-cols-2">
+                      {sector.stats.map((stat, i) => (
+                        <div
+                          key={stat.label}
+                          className={`px-4 py-2.5 ${i % 2 === 0 ? 'border-r' : ''} ${i < 2 ? 'border-b' : ''} ${
+                            isLight ? 'border-sky-300/20' : 'border-slate-300/40 dark:border-white/5'
+                          }`}
+                        >
+                          <p className={`font-mono text-[9px] tracking-[0.2em] mb-0.5 ${isLight ? 'text-sky-400/60' : 'text-slate-500 dark:text-gray-500'}`}>
+                            {stat.label}
+                          </p>
+                          <p className={`font-mono text-xs tracking-wider ${sector.accent}`}>
+                            {stat.value}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* 🌟 ปุ่มสลับลูกศร */}
+              <div
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className={`flex items-center justify-center py-1.5 cursor-pointer transition-colors ${
+                  isLight ? 'hover:bg-sky-300/10' : 'hover:bg-white/5'
+                }`}
+              >
+                {isCollapsed ? (
+                  <ChevronDown size={14} className={`${sector.accent} opacity-70`} />
+                ) : (
+                  <ChevronUp size={14} className={`${sector.accent} opacity-70`} />
+                )}
               </div>
 
               {/* Footer scanline */}
               <div className={`h-px bg-linear-to-r from-transparent via-current to-transparent opacity-30 ${sector.accent}`} />
             </motion.div>
           </AnimatePresence>
+
+          {/* Admin access button — hidden when already on admin routes */}
+          {!pathname.startsWith('/admin') && (
+            <Link
+              href="/admin"
+              className={`pointer-events-auto flex items-center gap-1.5 px-3 py-2.5 backdrop-blur-md border rounded-sm font-mono text-[9px] tracking-[0.2em] uppercase transition-all whitespace-nowrap ${
+                isLight
+                  ? 'bg-white/10 border-purple-400/30 text-purple-400/70 hover:bg-purple-500/10 hover:border-purple-400/60 hover:text-purple-300 shadow-md shadow-sky-950/40'
+                  : 'bg-black/55 border-purple-500/30 text-purple-400/60 hover:bg-purple-500/10 hover:border-purple-400/50 hover:text-purple-300 shadow-lg shadow-black/50'
+              }`}
+              title="Admin Access"
+            >
+              <ShieldCheck size={12} />
+              ADMIN
+            </Link>
+          )}
+
+          </div>
         </motion.div>
       )}
     </AnimatePresence>

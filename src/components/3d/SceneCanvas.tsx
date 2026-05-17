@@ -1,8 +1,8 @@
 'use client';
 
 import { Canvas, useThree } from '@react-three/fiber';
-import { Suspense, Fragment, useEffect } from 'react'; 
-import { Stars, Sparkles, Environment, Torus } from '@react-three/drei';
+import { Suspense, Fragment, useEffect, useState } from 'react';
+import { Stars, Sparkles, Torus } from '@react-three/drei';
 import * as THREE from 'three';
 import CrystalCore from './CrystalCore';
 import CameraRig from './CameraRig';
@@ -71,7 +71,29 @@ export default function SceneCanvas() {
   const isSystemBooted = useAppStore((state) => state.isSystemBooted);
   const theme = useThemeStore((s) => s.theme);
 
-  // 🔌 ฟังก์ชันสะพานไฟ สั่งแอด/ถอดคลาส .dark ไปที่ตัวโครงสร้างเว็บปกติ (เก็บไว้เพื่อให้ UI ข้าวนอกเปลี่ยนตาม)
+  const [sectorTitles, setSectorTitles] = useState({
+    skills:     CONFIG_PLANETS.skills.label,
+    services:   CONFIG_PLANETS.services.label,
+    experience: CONFIG_PLANETS.experience.label,
+    projects:   CONFIG_PLANETS.projects.label,
+  });
+
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/skills').then(r => r.ok ? r.json() : null),
+      fetch('/api/services').then(r => r.ok ? r.json() : null),
+      fetch('/api/experience').then(r => r.ok ? r.json() : null),
+      fetch('/api/projects/meta').then(r => r.ok ? r.json() : null),
+    ]).then(([skills, services, exp, proj]) => {
+      setSectorTitles({
+        skills:     skills?.sectorData?.title     || CONFIG_PLANETS.skills.label,
+        services:   services?.sectorData?.title   || CONFIG_PLANETS.services.label,
+        experience: exp?.sectorData?.title        || CONFIG_PLANETS.experience.label,
+        projects:   proj?.sectorData?.title       || CONFIG_PLANETS.projects.label,
+      });
+    }).catch(() => {});
+  }, []);
+
   useEffect(() => {
     const rootElement = document.documentElement;
     if (theme === 'dark') {
@@ -82,10 +104,10 @@ export default function SceneCanvas() {
   }, [theme]);
 
   const planets: PlanetCfg[] = [
-    { ...CONFIG_PLANETS.skills, path: "/skills" },
-    { ...CONFIG_PLANETS.services, path: "/services" },
-    { ...CONFIG_PLANETS.experience, path: "/experience" },
-    { ...CONFIG_PLANETS.projects, path: "/projects" },
+    { ...CONFIG_PLANETS.skills,     label: sectorTitles.skills,     path: "/skills" },
+    { ...CONFIG_PLANETS.services,   label: sectorTitles.services,   path: "/services" },
+    { ...CONFIG_PLANETS.experience, label: sectorTitles.experience, path: "/experience" },
+    { ...CONFIG_PLANETS.projects,   label: sectorTitles.projects,   path: "/projects" },
   ];
   const isLight = theme === 'light';
 
@@ -102,25 +124,38 @@ export default function SceneCanvas() {
         <fog attach="fog" args={[fogColor, fogNear, fogFar]} />
 
         {/* ☀️ ล็อกระบบแสงเนออนไซไฟของธีมมืดถาวร */}
-        <ambientLight intensity={0.2} />
-        
+        <ambientLight intensity={1.8} />
+        <pointLight position={[0, 0, 0]} intensity={4} distance={60} color="#ffffff" />
+
         <directionalLight
           position={[15, 10, 5]}
-          intensity={2} 
+          intensity={2}
           color="#c084fc"
         />
-        
+
         <directionalLight
           position={[-10, -10, -10]}
           intensity={1}
           color="#22d3ee"
         />
         
-        <Environment preset="city" />
-
-        {/* ✨ ล็อกกลุ่มดาวและละอองเนบิวลาสีฟ้าไซไฟถาวร (ไม่มีตัวแดงดักเรื่องคลาสสีแน่นอน) */}
-        <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
-        <Sparkles position={[0, 0, -30]} count={150} scale={[100, 80, 20]} size={2} speed={0.4} opacity={0.3} color="#22d3ee" />
+        {isLight ? (
+          <>
+            {/* ดาวพื้นหลังสำหรับธีมสว่าง: สองชั้น ให้ความสว่างต่างกัน */}
+            <Stars radius={100} depth={50} count={3500} factor={7} saturation={0.4} fade speed={0.8} />
+            <Stars radius={80} depth={30} count={800} factor={12} saturation={0.2} fade speed={1.3} />
+            {/* ฟุ้งเรืองแสงรอบดาวบางดวง */}
+            <Sparkles position={[0, 5, -25]} count={60} scale={[120, 90, 25]} size={5} speed={0.15} opacity={0.55} color="#ffffff" />
+            <Sparkles position={[10, -5, -20]} count={35} scale={[80, 60, 15]} size={9} speed={0.08} opacity={0.35} color="#e0eeff" />
+            <Sparkles position={[-15, 8, -30]} count={25} scale={[70, 50, 10]} size={12} speed={0.05} opacity={0.25} color="#ffd6ff" />
+            <Sparkles position={[0, 0, -30]} count={120} scale={[100, 80, 20]} size={2} speed={0.4} opacity={0.4} color="#22d3ee" />
+          </>
+        ) : (
+          <>
+            <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
+            <Sparkles position={[0, 0, -30]} count={150} scale={[100, 80, 20]} size={2} speed={0.4} opacity={0.3} color="#22d3ee" />
+          </>
+        )}
 
         <CameraRig />
 

@@ -6,9 +6,9 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAppStore } from '@/lib/store/useAppStore';
 import { useThemeStore } from '@/lib/store/useThemeStore';
-import { 
-  Menu, X, Hexagon, Code2, Cpu, Clock, FolderGit2, Sun, Moon, Orbit 
-} from 'lucide-react'; // 🌟 นำเข้า Orbit สำหรับปุ่ม System Overview
+import {
+  Menu, X, Hexagon, Code2, Cpu, Clock, FolderGit2, Sun, Moon, Orbit, ShieldCheck,
+} from 'lucide-react';
 
 const menuItems = [
   { name: 'Core (About)', path: '/about', icon: Hexagon },
@@ -127,15 +127,10 @@ export default function MobileMenu() {
                 })}
               </nav>
 
-              {/* 🌗 ฐานด้านล่าง: ปุ่มเปลี่ยนธีมอวกาศสลับขั้วตามสเปกสั่ง */}
-              <div className={`p-5 border-t bg-white/3 ${isLight ? 'border-sky-300/10' : 'border-white/5'}`}>
+              {/* ฐานด้านล่าง */}
+              <div className={`p-5 border-t space-y-3 bg-white/3 ${isLight ? 'border-sky-300/10' : 'border-white/5'}`}>
                 <button
-                  onClick={() => {
-                    // 🌟 ใช้ตัวแปร toggle อย่างถูกต้อง
-                    if (typeof toggle === 'function') {
-                      toggle();
-                    }
-                  }}
+                  onClick={() => { if (typeof toggle === 'function') toggle(); }}
                   className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 border rounded-sm font-mono text-xs tracking-wider transition-all ${
                     isLight
                       ? 'bg-sky-950/60 text-sky-300 border-sky-300/40 hover:bg-sky-950 shadow-md shadow-black/40'
@@ -145,6 +140,13 @@ export default function MobileMenu() {
                   {isLight ? <Moon size={14} /> : <Sun size={14} />}
                   <span>{isLight ? '[ ACTIVATE DARK ]' : '[ ACTIVATE LIGHT ]'}</span>
                 </button>
+
+                <Link href="/admin" onClick={() => setIsOpen(false)}>
+                  <div className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border rounded-sm font-mono text-xs tracking-wider transition-all bg-purple-500/5 border-purple-500/20 text-purple-400 hover:bg-purple-500/15 hover:border-purple-400/50 hover:text-purple-200">
+                    <ShieldCheck size={14} />
+                    <span>[ ADMIN ACCESS ]</span>
+                  </div>
+                </Link>
               </div>
             </motion.aside>
           </>

@@ -1,0 +1,7 @@
+name: CI/CD Pipeline to Docker Hub & Render
+
+# 🌟 ปรับระบบเซนเซอร์ให้ดักจับเฉพาะเมื่อมีการ Push โค้ดเข้า branch DevOps
+on:
+  push:
+    branches:
+      - DevOps # 👈 แก้ไขจาก main เป็น DevOps ตรงนี้ได้เลยครับ

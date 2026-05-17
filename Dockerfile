@@ -7,8 +7,7 @@ RUN npm install
 
 COPY . .
 
-# 🌟 [ADDED]: วางท่อหลอก Next.js ป้องกันระเบิดตอน Build บน GitHub Actions
-# (ค่าจริงบนระบบ Render จะวิ่งมาเขียนทับตัวนี้ให้อัตโนมัติในตอนรันครับ)
+# วางท่อหลอก Next.js ป้องกันระเบิดตอน Build บน GitHub Actions
 ENV MONGODB_URI=mongodb://localhost:27017/build_fallback
 
 RUN npm run build
@@ -19,7 +18,8 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-COPY --from=builder /app/next.config.mjs ./
+# 🌟 [FIXED]: แก้ไขจาก next.config.mjs เป็น next.config.ts ให้ตรงกับโครงสร้างจริงของกัปตัน
+COPY --from=builder /app/next.config.ts ./
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules

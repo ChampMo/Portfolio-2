@@ -8,7 +8,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
-import { Text, Torus, Line, useCursor } from '@react-three/drei';
+import { Text, Torus, Line, useCursor, Billboard } from '@react-three/drei';
 import * as THREE from 'three';
 import { useRouter, usePathname } from 'next/navigation';
 import gsap from 'gsap';
@@ -152,17 +152,18 @@ export default function TechForgePlanet({
         ))}
       </group>
 
-      {/* Holographic planet label */}
-      <Text
-        position={[0, 2.4, 0]}
-        fontSize={0.36}
-        color={hovered ? '#ffffff' : color}
-        letterSpacing={0.2}
-        anchorX="center"
-        anchorY="middle"
-      >
-        {label}
-      </Text>
+      {/* Holographic planet label — always faces camera */}
+      <Billboard position={[0, 2.4, 0]}>
+        <Text
+          fontSize={0.36}
+          color={hovered ? '#ffffff' : color}
+          letterSpacing={0.2}
+          anchorX="center"
+          anchorY="middle"
+        >
+          {label}
+        </Text>
+      </Billboard>
     </group>
   );
 }
@@ -213,17 +214,18 @@ function CategoryAxis({
         <meshBasicMaterial color={color} transparent opacity={0.45} />
       </Torus>
 
-      {/* Category label at the top of the ring */}
-      <Text
-        position={[0, ringRadius + 0.45, 0]}
-        fontSize={0.3}
-        color={color}
-        letterSpacing={0.18}
-        anchorX="center"
-        anchorY="middle"
-      >
-        {category.name}
-      </Text>
+      {/* Category label at the top of the ring — always faces camera */}
+      <Billboard position={[0, ringRadius + 0.45, 0]}>
+        <Text
+          fontSize={0.3}
+          color={color}
+          letterSpacing={0.18}
+          anchorX="center"
+          anchorY="middle"
+        >
+          {category.name}
+        </Text>
+      </Billboard>
 
       {/* Skill items distributed around the ring */}
       {category.items.map((item, idx) => (
@@ -250,15 +252,16 @@ function CategoryAxis({
             transparent
             opacity={0.9}
           />
-          <Text
-            position={[lineEnd[0] * 0.55, lineEnd[1] * 0.55 + 0.18, 0.05]}
-            fontSize={0.18}
-            color="#ffffff"
-            anchorX="center"
-            anchorY="middle"
-          >
-            {`${proficiency}%`}
-          </Text>
+          <Billboard position={[lineEnd[0] * 0.55, lineEnd[1] * 0.55 + 0.18, 0.05]}>
+            <Text
+              fontSize={0.18}
+              color="#ffffff"
+              anchorX="center"
+              anchorY="middle"
+            >
+              {`${proficiency}%`}
+            </Text>
+          </Billboard>
         </>
       )}
     </group>
@@ -292,16 +295,17 @@ function SkillItem({ position, label, color, isHovered, onHover }: SkillItemProp
           emissiveIntensity={isHovered ? 1.4 : 0.55}
         />
       </mesh>
-      <Text
-        position={[0, 0.26, 0]}
-        fontSize={isHovered ? 0.17 : 0.14}
-        color={isHovered ? '#ffffff' : '#cbd5e1'}
-        anchorX="center"
-        anchorY="middle"
-        maxWidth={2.2}
-      >
-        {label}
-      </Text>
+      <Billboard position={[0, 0.26, 0]}>
+        <Text
+          fontSize={isHovered ? 0.17 : 0.14}
+          color={isHovered ? '#ffffff' : '#cbd5e1'}
+          anchorX="center"
+          anchorY="middle"
+          maxWidth={2.2}
+        >
+          {label}
+        </Text>
+      </Billboard>
     </group>
   );
 }

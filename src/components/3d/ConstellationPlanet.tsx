@@ -157,18 +157,19 @@ export default function ConstellationPlanet({
         />
       )}
 
-      {/* Cluster label */}
-      <Text
-        position={[0, 2.6, 0]}
-        fontSize={0.32}
-        color={planetHovered ? '#ffffff' : color}
-        letterSpacing={0.2}
-        anchorX="center"
-        anchorY="middle"
-        raycast={() => null}
-      >
-        {label}
-      </Text>
+      {/* Cluster label — always faces camera */}
+      <Billboard position={[0, 2.6, 0]}>
+        <Text
+          fontSize={0.32}
+          color={planetHovered ? '#ffffff' : color}
+          letterSpacing={0.2}
+          anchorX="center"
+          anchorY="middle"
+          raycast={() => null}
+        >
+          {label}
+        </Text>
+      </Billboard>
     </group>
   );
 }

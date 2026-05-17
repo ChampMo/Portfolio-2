@@ -308,18 +308,19 @@ export default function ChronoRingPlanet({
         </Billboard>
       </group>
 
-      {/* Planet label (below the dial like a nameplate) */}
-      <Text
-        position={[0, -1.2, 0]}
-        fontSize={0.32}
-        color={hovered ? '#ffffff' : color}
-        letterSpacing={0.2}
-        anchorX="center"
-        anchorY="middle"
-        raycast={() => null}
-      >
-        {label}
-      </Text>
+      {/* Planet label (below the dial like a nameplate) — always faces camera */}
+      <Billboard position={[0, -1.2, 0]}>
+        <Text
+          fontSize={0.32}
+          color={hovered ? '#ffffff' : color}
+          letterSpacing={0.2}
+          anchorX="center"
+          anchorY="middle"
+          raycast={() => null}
+        >
+          {label}
+        </Text>
+      </Billboard>
     </group>
   );
 }

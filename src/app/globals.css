@@ -1,39 +1,179 @@
 @import "tailwindcss";
 
+/* ──────────────────────────────────────────────
+   Tailwind v4 — เปิดใช้ class-strategy dark mode
+   เพิ่ม class .dark บน <html> เพื่อ activate dark
+────────────────────────────────────────────── */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ==============================================
+   ☁️ LIGHT THEME (DEFAULT) — "Cloud Light"
+   ref: card ขาวเด่น + ขอบมุม sky-blue + เงานุ่ม → สะอาด เบา อ่านง่าย
+   - Page bg: ขาวเกือบล้วน (slate-50)
+   - Panels: ขาวสดมีเงา sky-blue soft
+   - Accent หลัก: sky-600 (ฟ้าสด clean)
+============================================== */
 :root {
-  /* ล็อคสีพื้นหลังให้เป็น Deep Space Black */
-  --background: #050505; 
-  --foreground: #ededed;
+  /* base — sky tone ตาม spec (admin/main bg) */
+  --bg-base: #e0f2fe;          /* sky-100 — main page bg */
+  --bg-surface: #f0f9ff;       /* sky-50 — sidebar / data panels / buttons */
+  --bg-fog: #e0f2fe;
+  --fg-base: #0f172a;          /* slate-900 — main text */
+  --fg-muted: #475569;         /* slate-600 — secondary */
+
+  /* frosted panels = sky-50 ตามที่ user ระบุ */
+  --surface: rgba(240, 249, 255, 0.92);   /* #f0f9ff alpha */
+  --surface-strong: #f0f9ff;
+  --border-soft: rgba(125, 211, 252, 0.5); /* sky-300/50 */
+  --shadow-card: 0 8px 30px rgba(56, 189, 248, 0.18);  /* sky-400 soft shadow */
+
+  /* accents — sky-blue primary */
+  --accent-sky: #0284c7;        /* sky-600 — primary */
+  --accent-cyan: #0e7490;       /* cyan-700 */
+  --accent-cyan-soft: #155e75;  /* cyan-800 */
+  --accent-fuchsia: #c026d3;    /* fuchsia-600 */
+  --accent-violet: #7c3aed;     /* violet-600 — สำรอง */
+
+  /* scrollbar */
+  --scrollbar-track: rgba(186, 230, 253, 0.3);
+  --scrollbar-thumb: #7dd3fc;
+  --scrollbar-thumb-hover: #38bdf8;
+
+  color-scheme: light;
 }
 
+/* ==============================================
+   🌌 DARK THEME — "Deep Space" (เดิมของเว็บ)
+============================================== */
+:root.dark {
+  --bg-base: #050505;
+  --bg-fog: #020617;            /* slate-950 */
+  --fg-base: #ededed;
+  --fg-muted: #94a3b8;
+
+  --surface: rgba(0, 0, 0, 0.6);
+  --surface-strong: rgba(0, 0, 0, 0.85);
+  --border-soft: rgba(34, 211, 238, 0.25);
+  --shadow-card: 0 0 30px rgba(34, 211, 238, 0.15);
+
+  --accent-violet: #a78bfa;     /* violet-400 — สว่างกว่าใน dark */
+  --accent-cyan: #22d3ee;       /* cyan-400 */
+  --accent-cyan-soft: #67e8f9;  /* cyan-300 */
+  --accent-fuchsia: #e879f9;    /* fuchsia-400 */
+
+  --scrollbar-track: rgba(5, 5, 5, 0.5);
+  --scrollbar-thumb: #0891b2;
+  --scrollbar-thumb-hover: #22d3ee;
+
+  color-scheme: dark;
+}
+
+/* expose vars เป็น Tailwind tokens ให้ใช้ผ่าน utility ได้ */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  
-  /* 
-    เชื่อมต่อ CSS Variables จาก Google Fonts (ใน layout.tsx) 
-    เข้ากับ Class ของ Tailwind 
-  */
+  --color-background: var(--bg-base);
+  --color-foreground: var(--fg-base);
+
   --font-sans: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, monospace;
   --font-serif: var(--font-cinzel), ui-serif, Georgia, serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  /* เซ็ตให้ทั้งเว็บใช้ Space Grotesk เป็นค่าเริ่มต้น */
+  background: var(--bg-base);
+  color: var(--fg-base);
   font-family: var(--font-sans);
-  /* ป้องกันการเลื่อนจอแบบปกติ เพราะเราจะใช้ GSAP ควบคุม 3D Scroll */
-  overflow: hidden; 
+  overflow: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* เพิ่ม Utilities สำหรับเอฟเฟกต์แสงอวกาศ (เผื่อเรียกใช้) */
+/* ☁️ Light mode: flat sky-100 ตาม spec — ไม่ใส่ gradient */
+html:not(.dark) body {
+  background: var(--bg-base);
+}
+
+/* ── SCROLLBAR ── ใช้ตัวแปร = ตามธีมอัตโนมัติ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 10px;
+  transition: background 0.3s ease;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
 @layer utilities {
+  /* glow effects — ปรับตามธีม */
   .text-glow {
-    text-shadow: 0 0 10px rgba(34, 211, 238, 0.8);
+    text-shadow: 0 0 10px color-mix(in srgb, var(--accent-cyan) 70%, transparent);
   }
   .box-glow {
-    box-shadow: 0 0 15px rgba(34, 211, 238, 0.2);
+    box-shadow: 0 0 15px color-mix(in srgb, var(--accent-cyan) 30%, transparent);
   }
+
+  /* utility shortcuts สำหรับ frosted panel — ใช้แทน bg-black/60 ในโค้ดใหม่ */
+  .panel-frost {
+    background: var(--surface);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border-soft);
+    box-shadow: var(--shadow-card);
+  }
+  .panel-frost-strong {
+    background: var(--surface-strong);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border-soft);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* custom scrollbar variant */
+  .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; border: none; }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--accent-cyan) 50%, transparent);
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-cyan);
+  }
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--accent-cyan) 50%, transparent) transparent;
+  }
+}
+
+/* ──────────────────────────────────────────────
+   🛟 LEGACY SAFETY NET (จะลบทิ้งเมื่อ migrate ครบ)
+   component เดิมที่ใช้ bg-black/XX โดยไม่มี dark: variant
+   ให้กลายเป็น white frosted ใน light mode
+   จำกัด selector เฉพาะ element ที่ไม่ได้ override ด้วย dark: prefix
+────────────────────────────────────────────── */
+:root:not(.dark) [class*="bg-black/"]:not([class*="dark:bg-"]):not([class*="bg-white"]) {
+  background-color: var(--surface) !important;
+}
+:root:not(.dark) .bg-gray-950:not([class*="dark:"]),
+:root:not(.dark) .bg-gray-900:not([class*="dark:"]) {
+  background-color: var(--bg-base) !important;
+}
+/* :root:not(.dark) .text-white:not([class*="dark:text-"]) {
+  color: var(--fg-base) !important;
+} */
+:root:not(.dark) .text-gray-300:not([class*="dark:text-"]),
+:root:not(.dark) .text-gray-400:not([class*="dark:text-"]) {
+  color: var(--fg-muted) !important;
+}
+/* 🟦 Borders: legacy `border-white/X` → sky-300 ใน light mode (เข้ากับธีม sky) */
+:root:not(.dark) [class*="border-white/"]:not([class*="dark:border-"]) {
+  border-color: rgba(125, 211, 252, 0.55) !important; /* sky-300/55 */
+}
+/* 🟦 Borders: legacy `border-cyan-500/XX` ให้เข้มขึ้นเล็กน้อยใน light mode (sky-500) */
+:root:not(.dark) [class*="border-cyan-500/"]:not([class*="dark:border-"]) {
+  border-color: rgba(14, 165, 233, 0.45) !important;  /* sky-500/45 */
 }

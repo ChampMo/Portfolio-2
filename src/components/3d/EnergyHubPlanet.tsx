@@ -16,6 +16,7 @@ import {
   Torus,
   Sparkles,
   useCursor,
+  Billboard,
 } from '@react-three/drei';
 import * as THREE from 'three';
 import { useRouter, usePathname } from 'next/navigation';
@@ -159,17 +160,18 @@ export default function EnergyHubPlanet({
         );
       })}
 
-      {/* Holographic planet label */}
-      <Text
-        position={[0, 2.4, 0]}
-        fontSize={0.36}
-        color={planetHovered ? '#ffffff' : color}
-        letterSpacing={0.2}
-        anchorX="center"
-        anchorY="middle"
-      >
-        {label}
-      </Text>
+      {/* Holographic planet label — always faces camera */}
+      <Billboard position={[0, 2.4, 0]}>
+        <Text
+          fontSize={0.36}
+          color={planetHovered ? '#ffffff' : color}
+          letterSpacing={0.2}
+          anchorX="center"
+          anchorY="middle"
+        >
+          {label}
+        </Text>
+      </Billboard>
     </group>
   );
 }
@@ -241,9 +243,9 @@ function Monolith({
         <meshBasicMaterial color={hue} />
       </mesh>
 
-      {/* Floating description on hover (only meaningful when focused) */}
+      {/* Floating description on hover (only meaningful when focused) — always faces camera */}
       {isHovered && isFocused && (
-        <group position={[0, 2.35, 0]}>
+        <Billboard position={[0, 2.35, 0]}>
           <Text
             position={[0, 0.32, 0]}
             fontSize={0.2}
@@ -268,7 +270,7 @@ function Monolith({
           >
             {service.tagline}
           </Text>
-        </group>
+        </Billboard>
       )}
     </group>
   );

@@ -9,7 +9,7 @@ import { Icon } from '@iconify/react';
 import {
   X, Download, Calendar, Cpu, Code, Database, Layout,
   Wrench, Briefcase, ChevronRight, ChevronLeft, Activity, ShieldCheck, FolderGit2,
-  ExternalLink, Image as ImageIcon, Mail, Phone, MapPin, GraduationCap,
+  ExternalLink, Image as ImageIcon, Mail, Phone, MapPin, GraduationCap, Link2, Check,
 } from 'lucide-react';
 
 interface AboutmeData {
@@ -48,6 +48,18 @@ export default function DataSlate() {
   
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [aboutPage, setAboutPage] = useState<1 | 2>(1);
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = async (proj: any) => {
+    const url = `${window.location.origin}/projects/${proj._id}`;
+    if (navigator.share) {
+      await navigator.share({ title: proj.title, url }).catch(() => {});
+    } else {
+      await navigator.clipboard.writeText(url).catch(() => {});
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   const [projects, setProjects] = useState<any[]>([]);
   const [tagsDict, setTagsDict] = useState<Record<string, string>>({});
@@ -74,6 +86,14 @@ export default function DataSlate() {
       setSummaryMode(true);
     }
   }, [pathname, setSystemBooted, setSummaryMode]);
+
+  // Sync URL /projects/[id] → focusedProjectId store (e.g. direct navigation / share link)
+  useEffect(() => {
+    if (pathname.startsWith('/projects/')) {
+      const projId = pathname.split('/').pop();
+      if (projId) setFocusedProjectId(projId);
+    }
+  }, [pathname, setFocusedProjectId]);
 
   const handleClose = () => {
     if (pathname !== '/') {
@@ -470,15 +490,32 @@ export default function DataSlate() {
   // ========================================================
   const renderProjectDetail = (proj: any) => (
     <div className="space-y-6">
-      {/* Back button */}
-      <button
-        onClick={() => setFocusedProjectId(null)}
-        className={`flex items-center gap-2 text-xs font-mono tracking-widest transition-colors ${
-          isLight ? 'text-sky-300/60 hover:text-sky-200' : 'text-gray-500 hover:text-cyan-400'
-        }`}
-      >
-        <ChevronLeft size={14} /> BACK TO CONSTELLATION
-      </button>
+      {/* Back button + Share button */}
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => {
+            setFocusedProjectId(null);
+            router.push('/projects');
+          }}
+          className={`flex items-center gap-2 text-xs font-mono tracking-widest transition-colors ${
+            isLight ? 'text-sky-300/60 hover:text-sky-200' : 'text-gray-500 hover:text-cyan-400'
+          }`}
+        >
+          <ChevronLeft size={14} /> BACK TO CONSTELLATION
+        </button>
+        <button
+          onClick={() => handleShare(proj)}
+          className={`flex items-center gap-1.5 text-xs font-mono tracking-widest px-3 py-1.5 rounded-sm border transition-all ${
+            copied
+              ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10'
+              : isLight
+                ? 'text-sky-300/70 border-sky-300/20 hover:text-sky-200 hover:border-sky-400 hover:bg-sky-500/10'
+                : 'text-gray-500 border-white/10 hover:text-cyan-400 hover:border-cyan-500/30 hover:bg-cyan-500/5'
+          }`}
+        >
+          {copied ? <><Check size={13} /> COPIED!</> : <><Link2 size={13} /> SHARE</>}
+        </button>
+      </div>
 
       {/* Cover image */}
       {proj.coverImage && (
@@ -593,7 +630,10 @@ export default function DataSlate() {
           {projects.map((proj, index) => (
             <button
               key={index}
-              onClick={() => setFocusedProjectId(String(proj._id))}
+              onClick={() => {
+                router.push(`/projects/${String(proj._id)}`);
+                setFocusedProjectId(String(proj._id));
+              }}
               className={`w-full text-left border p-6 rounded-sm space-y-3 transition-all group ${
                 isLight
                   ? 'bg-white/5 border-sky-300/20 hover:border-sky-400 hover:bg-white/10'
@@ -638,6 +678,11 @@ export default function DataSlate() {
   };
 
   const renderContent = () => {
+    if (pathname.startsWith('/projects/')) {
+      const projId = pathname.split('/').pop();
+      const proj = projId ? projects.find((p) => String(p._id) === projId) : null;
+      if (proj) return renderProjectDetail(proj);
+    }
     switch (pathname) {
       case '/':
       case '/about': return renderProfile();
@@ -681,9 +726,16 @@ export default function DataSlate() {
               isLight ? 'bg-white/5 border-sky-300/20' : 'bg-gray-950/80 border-cyan-500/30'
             }`}>
               {(() => {
-                const detailProj = pathname === '/projects' && focusedProjectId
-                  ? projects.find((p) => String(p._id) === focusedProjectId)
-                  : null;
+                const detailProj = (() => {
+                  if (pathname.startsWith('/projects/')) {
+                    const id = pathname.split('/').pop();
+                    return projects.find((p) => String(p._id) === id) || null;
+                  }
+                  if (pathname === '/projects' && focusedProjectId) {
+                    return projects.find((p) => String(p._id) === focusedProjectId) || null;
+                  }
+                  return null;
+                })();
                 const label = detailProj
                   ? detailProj.title
                   : pathname === '/' ? 'IDENTITY' : pathname.replace('/', '').toUpperCase();

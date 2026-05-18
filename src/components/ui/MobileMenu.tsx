@@ -39,6 +39,7 @@ export default function MobileMenu() {
   }, [theme]);
 
   if (!isSystemBooted) return null;
+  if (pathname.startsWith('/admin')) return null;
 
   return (
     <>

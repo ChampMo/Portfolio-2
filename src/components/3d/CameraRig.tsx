@@ -24,6 +24,15 @@ const warpCoordinates: Record<string, { pos: [number, number, number]; lookAt: [
 // 🪐 Planet routes are handled dynamically (their target moves each frame).
 const PLANET_PATHS = new Set(['/skills', '/services', '/experience', '/projects']);
 
+// Resolve sub-routes (e.g. /projects/abc) back to their parent planet path.
+function getPlanetRoute(path: string): string | null {
+  if (PLANET_PATHS.has(path)) return path;
+  for (const p of PLANET_PATHS) {
+    if (path.startsWith(p + '/')) return p;
+  }
+  return null;
+}
+
 // Camera offset when zoomed onto a planet — bumped for cinematic framing
 const PLANET_CAM_DIST = 11.0; // outward radial distance from the planet
 const PLANET_CAM_LIFT = 4.0;  // vertical lift above the planet
@@ -53,7 +62,7 @@ export default function CameraRig() {
   // GSAP warp helper for STATIC routes — applies zoomOffset along the away-vector
   const applyStaticWarp = useCallback((duration = 1.2) => {
     const path = pathnameRef.current;
-    if (PLANET_PATHS.has(path)) return;
+    if (getPlanetRoute(path)) return;
     const target = warpCoordinates[path] ?? warpCoordinates['/'];
     const [bx, by, bz] = target.pos;
     const [lx, ly, lz] = target.lookAt;
@@ -85,7 +94,7 @@ export default function CameraRig() {
     // Each new sector starts at its curated framing
     zoomOffset.current = 0;
 
-    if (PLANET_PATHS.has(pathname)) {
+    if (getPlanetRoute(pathname)) {
       gsap.killTweensOf(camera.position);
       gsap.killTweensOf(lookAtTarget.current);
       return;
@@ -104,7 +113,7 @@ export default function CameraRig() {
       );
       // Static routes need their GSAP target re-pointed. Planet routes pick up the
       // new offset automatically in useFrame.
-      if (!PLANET_PATHS.has(pathnameRef.current)) {
+      if (!getPlanetRoute(pathnameRef.current)) {
         applyStaticWarp(0.45);
       }
     };
@@ -116,8 +125,9 @@ export default function CameraRig() {
   useFrame((_, delta) => {
     if (!isSystemBooted) return;
 
-    if (PLANET_PATHS.has(pathname)) {
-      const p = planetPositions[pathname];
+    const planetRoute = getPlanetRoute(pathname);
+    if (planetRoute) {
+      const p = planetPositions[planetRoute];
       if (p) {
         // Position camera outward along the planet's radial vector from origin,
         // slightly elevated, so we look back toward the CrystalCore through the planet.

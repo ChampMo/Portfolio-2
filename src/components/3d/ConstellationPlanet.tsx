@@ -95,7 +95,7 @@ export default function ConstellationPlanet({
   const innerRef = useRef<THREE.Group>(null);
   const router = useRouter();
   const pathname = usePathname();
-  const isFocused = pathname === orbit.path;
+  const isFocused = pathname.startsWith(orbit.path);
 
   const focusedProjectId = useAppStore((s) => s.focusedProjectId);
   const setFocusedProjectId = useAppStore((s) => s.setFocusedProjectId);
@@ -166,7 +166,12 @@ export default function ConstellationPlanet({
     }
     const next = focusedProjectId === project.id ? null : project.id;
     setFocusedProjectId(next);
-    if (next !== null) setSummaryMode(true);
+    if (next !== null) {
+      router.push(`/projects/${next}`);
+      setSummaryMode(true);
+    } else {
+      router.push('/projects');
+    }
   };
 
   return (

@@ -508,7 +508,6 @@ export default function MultiplayerShip({
             outlineWidth={0.025}
             outlineColor="#001428"
             depthOffset={-2}
-            // @ts-expect-error — drei Text passes material props through
             material-depthWrite={true}
           >
             {callsign}

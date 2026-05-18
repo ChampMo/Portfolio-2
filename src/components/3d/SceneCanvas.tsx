@@ -11,8 +11,10 @@ import TechForgePlanet from './TechForgePlanet';
 import EnergyHubPlanet from './EnergyHubPlanet';
 import ChronoRingPlanet from './ChronoRingPlanet';
 import ConstellationPlanet from './ConstellationPlanet';
+import MultiplayerShip from './MultiplayerShip';
 import { useAppStore } from '@/lib/store/useAppStore';
 import { useThemeStore } from '@/lib/store/useThemeStore';
+import { useMultiplayer, type RemotePlayer } from '@/lib/hooks/useMultiplayer';
 
 const CONFIG_PLANETS = {
   skills: { radiusX: 12, radiusZ: 12, speed: 0.09, offset: 0, centerY: 1.0, color: "#10b981", label: "[ TECH FORGE ]" },
@@ -26,6 +28,65 @@ const MIN_ORBIT_SCALE = 0.55;
 const MAX_ORBIT_SCALE = 1.15;
 
 type PlanetCfg = (typeof CONFIG_PLANETS)[keyof typeof CONFIG_PLANETS] & { path: string };
+
+function MultiplayerShips({ players }: { players: RemotePlayer[] }) {
+  return (
+    <>
+      {players.map((player, index) => (
+        <MultiplayerShip
+          key={player.sessionId}
+          callsign={player.callsign}
+          planet={player.planet}
+          shipIndex={index}
+          colorIndex={player.colorIndex ?? 0}
+        />
+      ))}
+    </>
+  );
+}
+
+// Pre-compiles the most expensive WebGL shaders during the TerminalIntro so
+// the first frame after launch is stutter-free.  The group sits at y=-2000
+// (far below the scene), renders for one effect cycle, then unmounts.
+function AssetWarmup() {
+  const { gl, scene, camera } = useThree();
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    gl.compile(scene, camera);
+    setDone(true);
+  // gl/scene/camera are stable refs — exhaustive-deps would cause infinite loops
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (done) return null;
+
+  return (
+    <group position={[0, -2000, 0]}>
+      {/* MeshPhysicalMaterial — ship hull & accent */}
+      <mesh>
+        <boxGeometry args={[0.01, 0.01, 0.01]} />
+        <meshPhysicalMaterial clearcoat={1} metalness={0.96} roughness={0.18} color="#0b0f1a" />
+      </mesh>
+      {/* MeshStandardMaterial — thrusters & emissive elements */}
+      <mesh>
+        <sphereGeometry args={[0.01, 8, 6]} />
+        <meshStandardMaterial emissive="#22d3ee" emissiveIntensity={10} roughness={0} />
+      </mesh>
+      {/* MeshBasicMaterial additive — halo bloom spheres */}
+      <mesh>
+        <sphereGeometry args={[0.01, 8, 6]} />
+        <meshBasicMaterial
+          transparent
+          blending={THREE.AdditiveBlending}
+          side={THREE.BackSide}
+          color="#22d3ee"
+          opacity={0.2}
+        />
+      </mesh>
+    </group>
+  );
+}
 
 function OrbitalSystem({ planets }: { planets: PlanetCfg[] }) {
   const { size } = useThree();
@@ -70,6 +131,7 @@ function OrbitalSystem({ planets }: { planets: PlanetCfg[] }) {
 export default function SceneCanvas() {
   const isSystemBooted = useAppStore((state) => state.isSystemBooted);
   const theme = useThemeStore((s) => s.theme);
+  const { remotePlayers } = useMultiplayer();
 
   const [sectorTitles, setSectorTitles] = useState({
     skills:     CONFIG_PLANETS.skills.label,
@@ -157,12 +219,14 @@ export default function SceneCanvas() {
           </>
         )}
 
+        <AssetWarmup />
         <CameraRig />
 
         {isSystemBooted && (
           <Suspense fallback={null}>
             <CrystalCore />
             <OrbitalSystem planets={planets} />
+            <MultiplayerShips players={remotePlayers} />
           </Suspense>
         )}
       </Canvas>

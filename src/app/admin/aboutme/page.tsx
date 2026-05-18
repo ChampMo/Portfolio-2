@@ -264,7 +264,7 @@ export default function AboutMeAdmin() {
             {/* Left: Core Profile Image (tall) */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs tracking-widest text-sky-200/60 dark:text-gray-400">PROFILE PHOTO</span>
+                <span className="text-xs tracking-widest text-sky-200/60 dark:text-gray-400">CORE PHOTO</span>
                 {formData.media.coreImage && <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded-sm border border-emerald-500/20">✓ ACTIVE</span>}
               </div>
               <label className="group relative flex flex-col items-center justify-center w-full aspect-3/4 border-2 border-dashed border-sky-400/30 dark:border-purple-500/30 bg-sky-900/10 dark:bg-purple-950/10 hover:bg-sky-900/30 dark:hover:bg-purple-950/30 hover:border-sky-400 dark:hover:border-purple-400 transition-all rounded-sm cursor-pointer overflow-hidden">

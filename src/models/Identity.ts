@@ -20,6 +20,9 @@ const IdentitySchema = new Schema(
       coreImage: { type: String, default: '' },
       slideshowImages: [{ type: String }],
       cvUrl: { type: String, default: '' },
+      cvVisible: { type: Boolean, default: true },
+      transcriptUrl: { type: String, default: '' },
+      transcriptVisible: { type: Boolean, default: true },
     },
     socialLinks: {
       github: { type: String, default: '' },

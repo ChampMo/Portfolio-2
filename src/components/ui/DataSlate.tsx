@@ -8,21 +8,21 @@ import { useThemeStore } from '@/lib/store/useThemeStore';
 import { Icon } from '@iconify/react';
 import {
   X, Download, Calendar, Cpu, Code, Database, Layout,
-  Wrench, Briefcase, ChevronRight, ChevronLeft, Activity, ShieldCheck, FolderGit2,
-  ExternalLink, Image as ImageIcon, Mail, Phone, MapPin, GraduationCap, Link2, Check,
+  Wrench, Briefcase, ChevronRight, ChevronLeft, FolderGit2,
+  ExternalLink, Image as ImageIcon, Mail, Phone, MapPin, GraduationCap, Link2, Check, Scroll,
 } from 'lucide-react';
 
 interface AboutmeData {
   sectorData: { title: string; description: string };
   personalInfo: { firstName: string; lastName: string; nickname: string; motto: string; description: string; phone: string; email: string; address: string };
-  media: { coreImage: string; slideshowImages: string[]; cvUrl: string };
+  media: { coreImage: string; slideshowImages: string[]; cvUrl: string; cvVisible: boolean; transcriptUrl: string; transcriptVisible: boolean };
   socialLinks: { github: string; linkedin: string; instagram: string; facebook: string };
   education: { universityName: string; universityLogo: string; major: string; timelineStart: string; timelineEnd: string; gpax: string };
 }
 const defaultAboutme: AboutmeData = {
   sectorData: { title: '', description: '' },
   personalInfo: { firstName: '', lastName: '', nickname: '', motto: '', description: '', phone: '', email: '', address: '' },
-  media: { coreImage: '', slideshowImages: [], cvUrl: '' },
+  media: { coreImage: '', slideshowImages: [], cvUrl: '', cvVisible: true, transcriptUrl: '', transcriptVisible: true },
   socialLinks: { github: '', linkedin: '', instagram: '', facebook: '' },
   education: { universityName: '', universityLogo: '', major: '', timelineStart: '', timelineEnd: '', gpax: '' },
 };
@@ -47,7 +47,6 @@ export default function DataSlate() {
   const router = useRouter();
   
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [aboutPage, setAboutPage] = useState<1 | 2>(1);
   const [copied, setCopied] = useState(false);
 
   const handleShare = async (proj: any) => {
@@ -74,11 +73,6 @@ export default function DataSlate() {
     if (aboutmeData.media.coreImage) return [aboutmeData.media.coreImage];
     return profileImages;
   }, [aboutmeData.media.coreImage, aboutmeData.media.slideshowImages]);
-
-  // 🌟 รีเซ็ตหน้ากลับไปหน้าที่ 1 เสมอเมื่อเปลี่ยนหมวดหมู่
-  useEffect(() => {
-    setAboutPage(1);
-  }, [pathname, isSummaryMode]);
 
   useEffect(() => {
     if (pathname !== '/' && !pathname.startsWith('/admin')) {
@@ -131,7 +125,13 @@ export default function DataSlate() {
         const aboutmeRes = await fetch('/api/aboutme');
         if (aboutmeRes.ok) {
           const d = await aboutmeRes.json();
-          if (d && Object.keys(d).length > 0) setAboutmeData(d);
+          if (d && Object.keys(d).length > 0) {
+            setAboutmeData({
+              ...defaultAboutme,
+              ...d,
+              media: { ...defaultAboutme.media, ...(d.media ?? {}) },
+            });
+          }
         }
 
         const projMetaRes = await fetch('/api/projects/meta');
@@ -158,7 +158,7 @@ export default function DataSlate() {
   }, [isSummaryMode, pathname, slideshowSrc.length]);
 
   // ========================================================
-  // 🛠️ RENDER 1: PROFILE (รองรับระบบ 2 หน้า)
+  // 🛠️ RENDER 1: PROFILE (single-page layout)
   // ========================================================
   const renderProfile = () => {
     const totalSkills = Object.values(skillsData?.skills || {}).reduce((acc: number, arr: any) => acc + (arr?.length || 0), 0) as number;
@@ -177,208 +177,230 @@ export default function DataSlate() {
     ].filter(s => s.url);
 
     const contactItems = [
-      { label: 'EMAIL',    val: personalInfo.email,   icon: <Mail size={13} />   },
-      { label: 'PHONE',    val: personalInfo.phone,   icon: <Phone size={13} />  },
-      { label: 'LOCATION', val: personalInfo.address, icon: <MapPin size={13} /> },
+      { label: 'EMAIL',    val: personalInfo.email,   icon: <Mail size={11} />   },
+      { label: 'PHONE',    val: personalInfo.phone,   icon: <Phone size={11} />  },
+      { label: 'LOCATION', val: personalInfo.address, icon: <MapPin size={11} /> },
     ].filter(c => c.val);
 
     const eduLine = [education.timelineStart, education.timelineEnd].filter(Boolean).join(' – ')
       + (education.gpax ? ` · GPAX ${education.gpax}` : '');
 
+    const stats = [
+      { label: 'PROJECTS',    val: totalProjects,    icon: FolderGit2, clr: isLight ? 'text-fuchsia-400' : 'text-rose-400',   border: isLight ? 'border-fuchsia-400/20' : 'border-rose-500/20'   },
+      { label: 'SKILL NODES', val: totalSkills,      icon: Code,       clr: 'text-emerald-400',                               border: 'border-emerald-500/20'                                     },
+      { label: 'SERVICES',    val: totalServices,    icon: Cpu,        clr: 'text-amber-400',                                 border: 'border-amber-500/20'                                       },
+      { label: 'EXPERIENCE',  val: totalExperiences, icon: Briefcase,  clr: isLight ? 'text-sky-400' : 'text-cyan-400',       border: isLight ? 'border-sky-400/20' : 'border-cyan-500/20'        },
+    ];
+
     return (
-      <div className="relative overflow-hidden">
-        <AnimatePresence mode="wait">
-          {aboutPage === 1 ? (
-            <motion.div
-              key="page1"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-              className="flex flex-col lg:flex-row gap-8"
-            >
-              {/* ===== LEFT: Photo + Name + Social + CV ===== */}
-              <div className="w-full lg:w-1/3 flex flex-col gap-4">
-                <div className={`relative w-full aspect-square md:aspect-[4/5] rounded-sm overflow-hidden group border ${
-                  isLight ? 'bg-white/5 border-sky-300/30' : 'bg-black/60 border-cyan-500/20'
-                }`}>
-                  <div className={`absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 z-10 ${isLight ? 'border-sky-400' : 'border-cyan-400'}`} />
-                  <div className={`absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 z-10 ${isLight ? 'border-sky-400' : 'border-cyan-400'}`} />
-                  <AnimatePresence mode="popLayout">
-                    <motion.img
-                      key={currentImageIndex}
-                      src={slideshowSrc[currentImageIndex % slideshowSrc.length]}
-                      alt="Profile"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 0.85 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.8 }}
-                      className="absolute inset-0 w-full h-full object-cover group-hover:opacity-100 transition-opacity"
-                    />
-                  </AnimatePresence>
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-0" />
-                </div>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
+        className="flex flex-col gap-6"
+      >
+        {/* ── MAIN GRID ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-6">
 
-                <div>
-                  <h1 className="text-2xl font-serif text-white tracking-wider mb-0.5">{fullName}</h1>
-                  {personalInfo.nickname && (
-                    <p className={`font-mono text-sm ${isLight ? 'text-sky-300' : 'text-cyan-400'}`}>[ {personalInfo.nickname} ]</p>
-                  )}
-                  {personalInfo.motto && (
-                    <p className="text-sm text-gray-400 italic mt-1">{personalInfo.motto}</p>
-                  )}
-                </div>
+          {/* LEFT COL: photo · social · CV */}
+          <div className="flex flex-col gap-3">
+            {/* Photo frame */}
+            <div className={`relative w-full aspect-[3/4] rounded-sm overflow-hidden group border ${
+              isLight ? 'bg-white/5 border-sky-300/30' : 'bg-black/60 border-cyan-500/20'
+            }`}>
+              {/* corner brackets */}
+              {(['top-0 left-0 border-t-2 border-l-2', 'top-0 right-0 border-t-2 border-r-2',
+                 'bottom-0 left-0 border-b-2 border-l-2', 'bottom-0 right-0 border-b-2 border-r-2'] as const
+              ).map((pos, i) => (
+                <div key={i} className={`absolute w-4 h-4 z-10 ${pos} ${isLight ? 'border-sky-400' : 'border-cyan-400'}`} />
+              ))}
+              <AnimatePresence mode="popLayout">
+                <motion.img
+                  key={currentImageIndex}
+                  src={slideshowSrc[currentImageIndex % slideshowSrc.length]}
+                  alt="Profile"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 0.9 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.8 }}
+                  className="absolute inset-0 w-full h-full object-cover group-hover:opacity-100 transition-opacity duration-500"
+                />
+              </AnimatePresence>
 
-                {socialItems.length > 0 && (
-                  <div className="flex gap-2 flex-wrap">
-                    {socialItems.map(s => (
-                      <a key={s.key} href={s.url} target="_blank" rel="noopener noreferrer"
-                        className={`p-2 border rounded-sm transition-all ${
-                          isLight
-                            ? 'border-sky-400/30 text-sky-300 hover:bg-sky-500/20 hover:border-sky-400'
-                            : 'border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-400'
-                        }`}
-                      >
-                        <Icon icon={s.icon} width={16} />
-                      </a>
-                    ))}
-                  </div>
-                )}
+              {/* grid flash on transition */}
+              <motion.div
+                key={`grid-${currentImageIndex}`}
+                initial={{ opacity: 0.6 }}
+                animate={{ opacity: 0 }}
+                transition={{ duration: 0.9, ease: 'easeOut' }}
+                className="absolute inset-0 z-1 pointer-events-none"
+                style={{
+                  backgroundImage: isLight
+                    ? 'linear-gradient(rgba(56,189,248,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,0.3) 1px, transparent 1px)'
+                    : 'linear-gradient(rgba(34,211,238,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(34,211,238,0.3) 1px, transparent 1px)',
+                  backgroundSize: '22px 22px',
+                }}
+              />
+              {/* glowing scan line sweep */}
+              <motion.div
+                key={`scan-${currentImageIndex}`}
+                initial={{ top: '-2px', opacity: 1 }}
+                animate={{ top: '102%', opacity: 0.4 }}
+                transition={{ duration: 0.55, ease: 'linear' }}
+                className="absolute inset-x-0 h-0.5 z-2 pointer-events-none"
+                style={{
+                  background: isLight
+                    ? 'linear-gradient(90deg, transparent 0%, rgba(56,189,248,0.95) 50%, transparent 100%)'
+                    : 'linear-gradient(90deg, transparent 0%, rgba(34,211,238,0.95) 50%, transparent 100%)',
+                  boxShadow: isLight
+                    ? '0 0 10px 2px rgba(56,189,248,0.6)'
+                    : '0 0 10px 2px rgba(34,211,238,0.65)',
+                }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+              {/* scanning line */}
+            </div>
 
-                {media.cvUrl ? (
-                  <a href={media.cvUrl} target="_blank" rel="noopener noreferrer"
-                    className={`w-full flex items-center justify-center gap-3 px-6 py-3.5 border font-mono font-bold text-xs tracking-widest transition-all ${
+            {/* Social icons */}
+            {socialItems.length > 0 && (
+              <div className="flex gap-1.5">
+                {socialItems.map(s => (
+                  <a key={s.key} href={s.url} target="_blank" rel="noopener noreferrer"
+                    className={`flex-1 flex items-center justify-center p-2.5 border rounded-sm transition-all ${
                       isLight
-                        ? 'bg-sky-500/10 border-sky-400 text-sky-300 hover:bg-sky-500 hover:text-white'
-                        : 'bg-cyan-500/10 border-cyan-500 text-cyan-400 hover:bg-cyan-400 hover:text-black'
+                        ? 'border-sky-400/30 text-sky-300/70 hover:bg-sky-500/20 hover:border-sky-400 hover:text-sky-200'
+                        : 'border-white/10 text-gray-400 hover:bg-cyan-500/10 hover:border-cyan-500/50 hover:text-cyan-300'
                     }`}
                   >
-                    <Download size={16} /> [ DOWNLOAD CV ]
+                    <Icon icon={s.icon} width={20} />
                   </a>
-                ) : (
-                  <div className="w-full flex items-center justify-center gap-3 px-6 py-3.5 border font-mono text-xs tracking-widest opacity-30 border-white/10 text-gray-500">
-                    <Download size={16} /> [ NO CV UPLOADED ]
-                  </div>
-                )}
+                ))}
               </div>
+            )}
 
-              {/* ===== RIGHT: Info ===== */}
-              <div className="w-full lg:w-2/3 flex flex-col gap-5">
-                {personalInfo.description && (
-                  <div className={`p-5 rounded-sm border ${isLight ? 'bg-white/5 border-sky-300/20' : 'bg-cyan-950/10 border-cyan-500/20'}`}>
-                    <p className={`text-base leading-relaxed ${isLight ? 'text-sky-100' : 'text-gray-300'}`}>{personalInfo.description}</p>
-                  </div>
-                )}
+            {/* CV Button */}
+            {media.cvUrl && media.cvVisible && (
+              <a href={media.cvUrl} target="_blank" rel="noopener noreferrer"
+                className={`w-full flex items-center justify-center gap-2 py-3 border font-mono font-bold text-xs tracking-widest transition-all ${
+                  isLight
+                    ? 'bg-sky-500/10 border-sky-400/60 text-sky-300/80 hover:bg-sky-500 hover:text-white hover:border-sky-400'
+                    : 'bg-cyan-500/5 border-cyan-500/50 text-cyan-400/80 hover:bg-cyan-400 hover:text-black hover:border-cyan-400'
+                }`}
+              >
+                <Download size={13} /> DOWNLOAD CV
+              </a>
+            )}
 
-                {contactItems.length > 0 && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {contactItems.map((c, idx) => (
-                      <div key={idx} className={`p-4 rounded-sm border ${isLight ? 'bg-white/5 border-sky-300/20' : 'bg-white/5 border-white/5'}`}>
-                        <p className={`text-xs font-mono flex items-center gap-1.5 mb-1 ${isLight ? 'text-sky-400/70' : 'text-gray-500'}`}>
-                          {c.icon} {c.label}
-                        </p>
-                        <p className="text-base text-white break-all">{c.val}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
+            {/* Transcript Button */}
+            {media.transcriptUrl && media.transcriptVisible && (
+              <a href={media.transcriptUrl} target="_blank" rel="noopener noreferrer"
+                className={`w-full flex items-center justify-center gap-2 py-3 border font-mono font-bold text-xs tracking-widest transition-all ${
+                  isLight
+                    ? 'bg-sky-500/10 border-sky-400/60 text-sky-300/80 hover:bg-sky-500 hover:text-white hover:border-sky-400'
+                    : 'bg-cyan-500/5 border-cyan-500/50 text-cyan-400/80 hover:bg-cyan-400 hover:text-black hover:border-cyan-400'
+                }`}
+              >
+                <Scroll size={13} /> TRANSCRIPT
+              </a>
+            )}
+          </div>
 
-                {(education.universityName || education.major) && (
-                  <div className={`p-5 rounded-sm border ${isLight ? 'bg-white/5 border-sky-300/20' : 'bg-white/5 border-white/5'}`}>
-                    <p className={`text-xs font-mono flex items-center gap-1.5 mb-3 ${isLight ? 'text-sky-400/70' : 'text-gray-500'}`}>
-                      <GraduationCap size={13} /> ORIGIN (EDUCATION)
-                    </p>
-                    <div className="flex items-center gap-4">
-                      {education.universityLogo && (
-                        <img src={education.universityLogo} alt="University" className="w-14 h-14 object-contain shrink-0 opacity-90" />
-                      )}
-                      <div>
-                        {education.universityName && <p className="text-base text-white font-serif">{education.universityName}</p>}
-                        {education.major && <p className={`text-sm mt-0.5 ${isLight ? 'text-sky-300' : 'text-cyan-400'}`}>{education.major}</p>}
-                        {eduLine && <p className={`text-xs font-mono mt-0.5 ${isLight ? 'text-sky-200/60' : 'text-gray-500'}`}>{eduLine}</p>}
-                      </div>
-                    </div>
-                  </div>
-                )}
+          {/* RIGHT COL: identity + bio + contact + education */}
+          <div className="flex flex-col gap-4 min-w-0">
 
-                <div className="flex justify-end mt-auto pt-2">
-                  <button
-                    onClick={() => setAboutPage(2)}
-                    className={`group flex items-center gap-2 px-5 py-2.5 rounded-sm font-mono text-xs tracking-widest border transition-all ${
-                      isLight
-                        ? 'bg-sky-500/10 border-sky-400 text-sky-300 hover:bg-sky-500 hover:text-[#001320]'
-                        : 'bg-cyan-500/10 border-cyan-500 text-cyan-400 hover:bg-cyan-400 hover:text-black'
-                    }`}
-                  >
-                    SYSTEM TELEMETRY <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-
-          ) : (
-            // 🌟 PAGE 2: Dashboard System Telemetry (ข้อมูลแบบเดียวกับหน้าหลังบ้าน)
-            <motion.div 
-              key="page2"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              transition={{ duration: 0.3 }}
-              className="w-full flex flex-col h-full space-y-6"
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-6 border-sky-400/30 dark:border-cyan-500/30">
-                <div>
-                  <h1 className="text-3xl font-serif text-white flex items-center gap-3" style={{ color: '#ffffff' }}>
-                    <Activity className={`animate-pulse ${isLight ? 'text-sky-400' : 'text-cyan-400'}`} size={28} />
-                    Command Telemetry
-                  </h1>
-                  <p className={`text-xs tracking-widest mt-2 ${isLight ? 'text-sky-400' : 'text-cyan-500'}`}>[ SYSTEM ROOT MONITORING PLATFORM ]</p>
-                </div>
-                <div className={`flex items-center gap-2.5 px-4 py-2 border rounded-sm font-mono text-xs ${
-                  isLight ? 'bg-white/5 border-sky-300/20 text-sky-300' : 'bg-white/5 border-cyan-500/20 text-cyan-400'
-                }`}>
-                  <ShieldCheck size={14} className="text-emerald-400 animate-bounce" />
-                  <span>SECURITY: ACTIVE</span>
-                </div>
-              </div>
-
-              {/* 🌟 METRICS GRID */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 flex-1 content-start">
-                {[
-                  { label: 'PROJECTS', val: totalProjects, icon: FolderGit2, clr: isLight ? 'text-fuchsia-400' : 'text-rose-400' },
-                  { label: 'SKILL NODES', val: totalSkills, icon: Code, clr: 'text-emerald-400' },
-                  { label: 'SERVICES', val: totalServices, icon: Cpu, clr: 'text-amber-400' },
-                  { label: 'RECORDS', val: totalExperiences, icon: Briefcase, clr: isLight ? 'text-sky-400' : 'text-cyan-400' },
-                ].map((m, idx) => (
-                  <div key={idx} className={`p-5 border rounded-sm flex flex-col items-start justify-between group transition-colors ${
-                    isLight ? 'bg-white/5 border-sky-300/20 hover:border-sky-400' : 'bg-black/40 border-white/10 hover:border-cyan-500'
+            {/* Name / Nickname / Motto */}
+            <div className={`pb-4 border-b ${isLight ? 'border-sky-300/20' : 'border-white/10'}`}>
+              <h1 className="text-3xl font-serif text-white tracking-wide leading-tight">{fullName}</h1>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
+                {personalInfo.nickname && (
+                  <span className={`font-mono text-xs px-2 py-0.5 border rounded-sm ${
+                    isLight ? 'border-sky-400/40 text-sky-300 bg-sky-500/10' : 'border-cyan-500/30 text-cyan-400 bg-cyan-500/10'
                   }`}>
-                    <div className="space-y-1 w-full flex justify-between items-start">
-                      <p className={`text-xs font-mono tracking-widest uppercase ${isLight ? 'text-sky-200/60' : 'text-gray-500'}`}>{m.label}</p>
-                      <m.icon size={16} className={`${m.clr} opacity-60 group-hover:opacity-100 transition-opacity`} />
-                    </div>
-                    <p className={`text-3xl font-mono font-bold mt-4 ${m.clr}`}>{m.val}</p>
+                    [ {personalInfo.nickname} ]
+                  </span>
+                )}
+                {personalInfo.motto && (
+                  <span className="text-xs text-gray-400 italic">{personalInfo.motto}</span>
+                )}
+              </div>
+            </div>
+
+            {/* Bio */}
+            {personalInfo.description && (
+              <div className={`p-4 rounded-sm border ${
+                isLight ? 'bg-white/5 border-sky-300/20' : 'bg-cyan-950/10 border-cyan-500/15'
+              }`}>
+                <p className={`text-sm leading-relaxed ${isLight ? 'text-sky-100/90' : 'text-gray-300'}`}>
+                  {personalInfo.description}
+                </p>
+              </div>
+            )}
+
+            {/* Contact grid */}
+            {contactItems.length > 0 && (
+              <div className={`grid gap-px border rounded-sm overflow-hidden ${
+                isLight ? 'border-sky-300/20 bg-sky-300/10' : 'border-white/8 bg-white/8'
+              }`}>
+                {contactItems.map((c, idx) => (
+                  <div key={idx} className={`flex items-center gap-3 px-4 py-2.5 ${
+                    isLight ? 'bg-white/5' : 'bg-black/30'
+                  }`}>
+                    <span className={`shrink-0 ${isLight ? 'text-sky-400/60' : 'text-gray-500'}`}>{c.icon}</span>
+                    <span className={`text-xs font-mono tracking-widest w-16 shrink-0 ${isLight ? 'text-sky-400/60' : 'text-gray-500'}`}>{c.label}</span>
+                    <span className={`text-xs text-white/80 truncate ${isLight ? '' : ''}`}>{c.val}</span>
                   </div>
                 ))}
               </div>
+            )}
 
-              {/* 🌟 ปุ่มย้อนกลับ */}
-              <div className="flex justify-start pt-6 mt-auto">
-                <button 
-                  onClick={() => setAboutPage(1)}
-                  className={`group flex items-center gap-2 px-5 py-2.5 rounded-sm font-mono text-xs tracking-widest border transition-all ${
-                    isLight 
-                      ? 'bg-sky-500/10 border-sky-400 text-sky-300 hover:bg-sky-500 hover:text-[#001320]' 
-                      : 'bg-cyan-500/10 border-cyan-500 text-cyan-400 hover:bg-cyan-400 hover:text-black'
-                  }`}
-                >
-                  <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> BACK TO IDENTITY
-                </button>
+            {/* Education */}
+            {(education.universityName || education.major) && (
+              <div className={`flex items-center gap-4 p-4 rounded-sm border ${
+                isLight ? 'bg-white/5 border-sky-300/20' : 'bg-white/3 border-white/8'
+              }`}>
+                {education.universityLogo && (
+                  <img src={education.universityLogo} alt="University" className="w-11 h-11 object-contain shrink-0 opacity-80" />
+                )}
+                <div className="min-w-0">
+                  <p className={`text-xs font-mono mb-1 ${isLight ? 'text-sky-400/60' : 'text-gray-500'}`}>
+                    <GraduationCap size={11} className="inline mr-1.5" />ORIGIN
+                  </p>
+                  {education.universityName && (
+                    <p className="text-sm text-white font-serif leading-snug">{education.universityName}</p>
+                  )}
+                  {education.major && (
+                    <p className={`text-xs mt-0.5 ${isLight ? 'text-sky-300' : 'text-cyan-400'}`}>{education.major}</p>
+                  )}
+                  {eduLine && (
+                    <p className={`text-xs font-mono mt-0.5 ${isLight ? 'text-sky-200/50' : 'text-gray-600'}`}>{eduLine}</p>
+                  )}
+                </div>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── TELEMETRY STRIP ── */}
+        <div className={`grid grid-cols-2 lg:grid-cols-4 gap-3 pt-5 border-t ${
+          isLight ? 'border-sky-300/20' : 'border-white/10'
+        }`}>
+          {stats.map((m, idx) => (
+            <div key={idx} className={`relative flex items-center justify-between px-4 py-3.5 border rounded-sm group overflow-hidden transition-all ${
+              isLight
+                ? `bg-white/5 border-sky-300/15 hover:${m.border} hover:bg-white/8`
+                : `bg-black/30 border-white/8 hover:${m.border} hover:bg-white/3`
+            }`}>
+              {/* glow blob */}
+              <div className={`absolute -bottom-4 -right-4 w-16 h-16 rounded-full blur-2xl opacity-0 group-hover:opacity-30 transition-opacity ${m.clr} bg-current`} />
+              <div>
+                <p className={`text-xs font-mono tracking-widest mb-1 ${isLight ? 'text-sky-200/50' : 'text-gray-600'}`}>{m.label}</p>
+                <p className={`text-2xl font-mono font-bold ${m.clr}`}>{m.val}</p>
+              </div>
+              <m.icon size={18} className={`${m.clr} opacity-25 group-hover:opacity-70 transition-opacity shrink-0`} />
+            </div>
+          ))}
+        </div>
+      </motion.div>
     );
   };
 

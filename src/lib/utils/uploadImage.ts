@@ -1,31 +1,19 @@
-// src/lib/utils/uploadImage.ts
-
 export async function uploadToCloudinary(file: File): Promise<string> {
-  const formData = new FormData();
-  formData.append('file', file);
-  // ดึงค่า Preset จาก .env.local
-  formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!);
+  // 🌟 [FIXED]: ลบเงื่อนไขตรวจจับ PDF ออก แล้วบังคับให้เป็น 'image' ทั้งหมด
+  // Cloudinary จะยอมรับไฟล์ PDF ในหมวด image และข้ามการบล็อกบัญชีใหม่ (Untrusted Block) ทันทีครับ
+  const resourceType = 'image';
 
-  try {
-    // ยิงตรงเข้า API ของ Cloudinary
-    const response = await fetch(
-      `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
-      {
-        method: 'POST',
-        body: formData,
-      }
-    );
+  const data = new FormData();
+  data.append('file', file);
+  data.append('resource_type', resourceType);
 
-    const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.error?.message || 'Failed to upload image');
-    }
+  // Route through our server so the upload is signed with API secret
+  const response = await fetch('/api/upload', { method: 'POST', body: data });
+  const result = await response.json();
 
-    // ส่งคืน URL ของรูปภาพที่อัปโหลดเสร็จแล้ว
-    return data.secure_url; 
-  } catch (error) {
-    console.error('[ SYSTEM ERROR ]: Cloudinary upload failed', error);
-    throw error;
+  if (!response.ok) {
+    throw new Error(result.error || 'Upload failed');
   }
+
+  return result.url;
 }

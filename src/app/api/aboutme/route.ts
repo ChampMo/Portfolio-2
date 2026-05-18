@@ -21,9 +21,10 @@ export async function POST(request: Request) {
     await connectToDatabase();
     const body = await request.json();
     
-    const updatedIdentity = await Identity.findOneAndUpdate({}, body, {
+    const updatedIdentity = await Identity.findOneAndUpdate({}, { $set: body }, {
       new: true,
       upsert: true,
+      strict: false,
     });
 
     return NextResponse.json(updatedIdentity, { status: 200 });

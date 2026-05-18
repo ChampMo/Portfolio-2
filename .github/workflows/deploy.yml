@@ -42,6 +42,10 @@ jobs:
           context: .
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/portfolio:latest
+          # 🌟 เพิ่มการส่งมอบกุญแจ Pusher เข้าไปในขั้นตอน Build
+          build-args: |
+            NEXT_PUBLIC_PUSHER_KEY=${{ secrets.NEXT_PUBLIC_PUSHER_KEY }}
+            NEXT_PUBLIC_PUSHER_CLUSTER=${{ secrets.NEXT_PUBLIC_PUSHER_CLUSTER }}
 
       - name: Trigger Render Deployment
         run: curl ${{ secrets.RENDER_DEPLOY_HOOK }}

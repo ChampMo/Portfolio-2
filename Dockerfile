@@ -10,6 +10,13 @@ COPY . .
 # วางท่อหลอก Next.js ป้องกันระเบิดตอน Build บน GitHub Actions
 ENV MONGODB_URI=mongodb://localhost:27017/build_fallback
 
+ARG NEXT_PUBLIC_PUSHER_KEY
+ARG NEXT_PUBLIC_PUSHER_CLUSTER
+
+# 🌟 2. แปลงเป็น Environment ให้ Next.js มองเห็นตอน Build
+ENV NEXT_PUBLIC_PUSHER_KEY=$NEXT_PUBLIC_PUSHER_KEY
+ENV NEXT_PUBLIC_PUSHER_CLUSTER=$NEXT_PUBLIC_PUSHER_CLUSTER
+
 RUN npm run build
 
 # --- Stage 2: Production ---

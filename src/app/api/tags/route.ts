@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   try {
     await connectToDatabase();
     const { name } = await request.json();
-    
+
     // ตรวจสอบว่ามีชื่อนี้ในระบบหรือยัง
     const existingTag = await Tag.findOne({ name: { $regex: new RegExp(`^${name}$`, 'i') } });
     if (existingTag) {
@@ -27,5 +27,17 @@ export async function POST(request: Request) {
     return NextResponse.json(newTag, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to create tag' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    await connectToDatabase();
+    const { id } = await request.json();
+    if (!id) return NextResponse.json({ error: 'No id provided' }, { status: 400 });
+    await Tag.findByIdAndDelete(id);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to delete tag' }, { status: 500 });
   }
 }

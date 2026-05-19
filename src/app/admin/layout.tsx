@@ -8,6 +8,7 @@ import { User, Code2, Cpu, Clock, FolderGit2, LogOut, Hexagon, Menu, X, Sun, Moo
 // นำเข้า Context และ Store
 import { AdminProvider, useAdmin } from '@/context/AdminContext';
 import { ToastProvider } from '@/context/ToastContext';
+import { ConfirmProvider } from '@/context/ConfirmContext';
 import AdminAuthGate from '@/components/admin/AdminAuthGate';
 import { useThemeStore } from '@/lib/store/useThemeStore'; 
 
@@ -193,8 +194,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <AdminProvider>
-      <ToastProvider> 
-        <AdminAuthGate>
+      <ToastProvider>
+        <ConfirmProvider>
+          <AdminAuthGate>
           <div className="h-screen overflow-hidden font-mono flex flex-col md:flex-row relative z-50 pointer-events-auto transition-colors duration-300
             bg-[#001320] text-sky-100 dark:bg-gray-950 dark:text-gray-300"
           >
@@ -211,7 +213,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <SidebarNavigation isOpen={isMobileMenuOpen} setIsOpen={setIsMobileMenuOpen} />
             <AdminMain>{children}</AdminMain>
           </div>
-        </AdminAuthGate>
+          </AdminAuthGate>
+        </ConfirmProvider>
       </ToastProvider>
     </AdminProvider>
   );

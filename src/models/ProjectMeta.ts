@@ -6,6 +6,7 @@ const ProjectMetaSchema = new Schema(
       title: { type: String, default: '[ CONSTELLATION ]' },
       description: { type: String, default: 'A stellar map of my complete projects, experiments, and case studies.' },
     },
+    projectOrder: [{ type: String }],
   },
   { timestamps: true }
 );

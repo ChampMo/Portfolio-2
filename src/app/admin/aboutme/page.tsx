@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Save, UploadCloud, Image as ImageIcon, Link as LinkIcon, GraduationCap, User, Terminal, Loader2, FileText, CheckCircle2, AlertCircle, Trash2, Plus, Eye, EyeOff, Scroll, ExternalLink } from 'lucide-react';
+import { Save, UploadCloud, Image as ImageIcon, Link as LinkIcon, GraduationCap, User, Terminal, Loader2, FileText, CheckCircle2, AlertCircle, Trash2, Plus, Eye, EyeOff, Scroll, ExternalLink, GripVertical } from 'lucide-react';
 import { uploadToCloudinary } from '@/lib/utils/uploadImage';
+import { uploadCvToGoogleDrive } from '@/lib/utils/uploadCV';
 import { useAdmin } from '@/context/AdminContext';
+import DragDropImageUpload from '@/components/admin/DragDropImageUpload';
 
 const defaultData = {
   sectorData: { title: '[ IDENTITY ]', description: 'Personal identification protocols and core biography synchronization files.' },
@@ -49,6 +51,8 @@ export default function AboutMeAdmin() {
   // Document input mode: 'upload' shows file picker, 'url' shows text input
   const [docMode, setDocMode] = useState<Record<string, 'upload' | 'url'>>({ cvUrl: 'upload', transcriptUrl: 'upload' });
   const [docUrlDraft, setDocUrlDraft] = useState<Record<string, string>>({ cvUrl: '', transcriptUrl: '' });
+  const [slideDrag, setSlideDrag] = useState<number | null>(null);
+  const [slideDragOver, setSlideDragOver] = useState<number | null>(null);
   const { setUnsavedPath, isViewMode } = useAdmin();
 
   useEffect(() => {
@@ -121,6 +125,9 @@ export default function AboutMeAdmin() {
     setFormData(prev => ({ ...prev, media: { ...prev.media, [field]: !prev.media[field] } }));
   };
 
+  // Fields that must go to Google Drive instead of Cloudinary (PDFs are blocked on Cloudinary)
+  const DOC_FIELDS: readonly string[] = ['cvUrl', 'transcriptUrl'];
+
   const handleSingleUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
     category: keyof FormData,
@@ -128,17 +135,20 @@ export default function AboutMeAdmin() {
   ) => {
     if (!e.target.files || e.target.files.length === 0) return;
     setUploadingField(field);
+    const isDoc = DOC_FIELDS.includes(field);
     try {
-      // If replacing an existing file, queue old URL for Cloudinary deletion
       const oldUrl = (formData[category] as Record<string, unknown>)[field];
-      if (typeof oldUrl === 'string' && oldUrl) {
+      // Only queue old URL for Cloudinary deletion if it actually lives on Cloudinary
+      if (typeof oldUrl === 'string' && oldUrl && oldUrl.includes('cloudinary.com')) {
         setPendingDeletes(prev => [...prev, oldUrl]);
       }
-      const url = await uploadToCloudinary(e.target.files[0]);
+      const url = isDoc
+        ? await uploadCvToGoogleDrive(e.target.files[0])
+        : await uploadToCloudinary(e.target.files[0]);
       handleChange(category, field, url);
-      showToast('Asset successfully uploaded to cloud.', 'success');
+      showToast('Asset successfully uploaded.', 'success');
     } catch {
-      showToast('Upload failed. Check Cloudinary config.', 'error');
+      showToast('Upload failed. Check connection and credentials.', 'error');
     } finally {
       setUploadingField(null);
       e.target.value = '';
@@ -170,6 +180,63 @@ export default function AboutMeAdmin() {
       ...prev,
       media: { ...prev.media, slideshowImages: prev.media.slideshowImages.filter((_, idx) => idx !== indexToRemove) },
     }));
+  };
+
+  const handleSingleFileDrop = async (file: File, category: keyof FormData, field: string) => {
+    setUploadingField(field);
+    try {
+      const oldUrl = (formData[category] as Record<string, unknown>)[field];
+      if (typeof oldUrl === 'string' && oldUrl && oldUrl.includes('cloudinary.com')) {
+        setPendingDeletes(prev => [...prev, oldUrl]);
+      }
+      const url = await uploadToCloudinary(file);
+      handleChange(category, field, url);
+      showToast('Asset successfully uploaded to cloud.', 'success');
+    } catch {
+      showToast('Upload failed. Check Cloudinary config.', 'error');
+    } finally {
+      setUploadingField(null);
+    }
+  };
+
+  const handleMultiFileDrop = async (files: File[]) => {
+    setUploadingField('slideshowImages');
+    try {
+      const uploadedUrls = await Promise.all(files.map(f => uploadToCloudinary(f)));
+      setFormData(prev => ({
+        ...prev,
+        media: { ...prev.media, slideshowImages: [...prev.media.slideshowImages, ...uploadedUrls] },
+      }));
+      showToast(`${files.length} image${files.length > 1 ? 's' : ''} added to orbit.`, 'success');
+    } catch {
+      showToast('Failed to upload some images.', 'error');
+    } finally {
+      setUploadingField(null);
+    }
+  };
+
+  const handleSlideStart = (e: React.DragEvent, idx: number) => {
+    setSlideDrag(idx);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+  const handleSlideEnter = (idx: number) => {
+    if (slideDrag !== null && idx !== slideDrag) setSlideDragOver(idx);
+  };
+  const handleSlideDrop = (targetIdx: number) => {
+    if (slideDrag === null || slideDrag === targetIdx) return;
+    const newImgs = [...formData.media.slideshowImages];
+    const [moved] = newImgs.splice(slideDrag, 1);
+    newImgs.splice(targetIdx, 0, moved);
+    setFormData(prev => ({ ...prev, media: { ...prev.media, slideshowImages: newImgs } }));
+    setSlideDrag(null);
+    setSlideDragOver(null);
+  };
+  const handleSlideEnd = () => { setSlideDrag(null); setSlideDragOver(null); };
+  const handleSlideshowAreaDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!e.dataTransfer.types.includes('Files')) return;
+    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+    if (files.length) handleMultiFileDrop(files);
   };
 
   if (isLoading) {
@@ -211,24 +278,24 @@ export default function AboutMeAdmin() {
         </div>
       </div>
 
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-sky-400/30 dark:border-purple-500/30 pb-6">
+      {/* STICKY TOPBAR */}
+      <div className="sticky top-0 z-10 backdrop-blur-md pt-4 pb-4 border-b flex items-center justify-between bg-[#001320]/90 border-sky-400/30 dark:bg-gray-950/90 dark:border-purple-500/30">
         <div>
-          <h1 className="text-3xl font-serif text-sky-100 dark:text-white">Identity Configuration</h1>
-          <p className="text-xs text-sky-400 dark:text-purple-500 tracking-widest mt-2">[ MANAGE ABOUT ME DATA ]</p>
+          <h1 className="text-2xl font-serif text-sky-100 dark:text-white">Identity Configuration</h1>
+          <p className="text-[10px] text-sky-400 dark:text-purple-500 tracking-widest mt-0.5">[ MANAGE ABOUT ME DATA ]</p>
         </div>
         {!isViewMode && (
           <button
             onClick={handleSave}
             disabled={isSaving || !hasChanges}
-            className={`flex items-center gap-2 px-6 py-2.5 font-bold text-xs tracking-widest rounded-sm transition-all ${
+            className={`flex items-center gap-2 px-5 py-2 font-bold text-xs tracking-widest rounded-sm transition-all border ${
               hasChanges
-                ? 'bg-sky-500 hover:bg-sky-400 text-[#001320] dark:bg-purple-500 dark:hover:bg-purple-400 dark:text-black cursor-pointer'
-                : 'bg-white/5 text-sky-200/40 border border-sky-300/20 dark:text-gray-500 dark:border-white/10 cursor-not-allowed'
+                ? 'bg-sky-500 border-sky-400 text-[#001320] dark:bg-purple-500 dark:border-purple-400 dark:text-black shadow-[0_0_15px_rgba(139,92,246,0.3)] cursor-pointer'
+                : 'bg-white/5 border-sky-300/20 dark:border-white/10 text-sky-200/40 cursor-not-allowed'
             }`}
           >
-            {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-            {isSaving ? 'SYNCING...' : hasChanges ? 'SAVE CHANGES' : 'UP TO DATE'}
+            {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            {isSaving ? 'SAVING...' : hasChanges ? 'SAVE ALL' : 'UP TO DATE'}
           </button>
         )}
       </div>
@@ -267,27 +334,13 @@ export default function AboutMeAdmin() {
                 <span className="text-xs tracking-widest text-sky-200/60 dark:text-gray-400">CORE PHOTO</span>
                 {formData.media.coreImage && <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded-sm border border-emerald-500/20">✓ ACTIVE</span>}
               </div>
-              <label className="group relative flex flex-col items-center justify-center w-full aspect-3/4 border-2 border-dashed border-sky-400/30 dark:border-purple-500/30 bg-sky-900/10 dark:bg-purple-950/10 hover:bg-sky-900/30 dark:hover:bg-purple-950/30 hover:border-sky-400 dark:hover:border-purple-400 transition-all rounded-sm cursor-pointer overflow-hidden">
-                <input type="file" accept="image/*" className="hidden" onChange={(e) => handleSingleUpload(e, 'media', 'coreImage')} />
-                {uploadingField === 'coreImage' ? (
-                  <div className="flex flex-col items-center gap-2 text-sky-400 dark:text-purple-500">
-                    <Loader2 size={28} className="animate-spin" /><span className="text-xs font-mono">UPLOADING...</span>
-                  </div>
-                ) : formData.media.coreImage ? (
-                  <>
-                    <img src={formData.media.coreImage} alt="Core" className="absolute inset-0 w-full h-full object-cover opacity-85 group-hover:opacity-30 group-hover:scale-105 transition-all duration-500" />
-                    <div className="relative z-10 flex flex-col items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="bg-black/70 p-3 rounded-full text-white shadow-lg"><UploadCloud size={22} /></div>
-                      <span className="text-[10px] font-bold tracking-widest text-white drop-shadow-md bg-black/50 px-2 py-0.5 rounded-sm">CHANGE PHOTO</span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex flex-col items-center text-sky-200/40 dark:text-gray-500 group-hover:text-sky-400 dark:group-hover:text-purple-400 transition-colors gap-3">
-                    <User size={36} className="opacity-40" />
-                    <span className="text-xs tracking-widest">UPLOAD PNG / JPG</span>
-                  </div>
-                )}
-              </label>
+              <DragDropImageUpload
+                imageUrl={formData.media.coreImage}
+                isUploading={uploadingField === 'coreImage'}
+                onFileDrop={(file) => handleSingleFileDrop(file, 'media', 'coreImage')}
+                className="w-full aspect-3/4"
+                placeholder="CLICK OR DRAG PHOTO"
+              />
             </div>
 
             {/* Right: Documents stacked */}
@@ -398,7 +451,9 @@ export default function AboutMeAdmin() {
                             onClick={() => {
                               if (draft.trim()) {
                                 const oldUrl = formData.media[field];
-                                if (oldUrl) setPendingDeletes(prev => [...prev, oldUrl]);
+                                if (oldUrl && oldUrl.includes('cloudinary.com')) {
+                                  setPendingDeletes(prev => [...prev, oldUrl]);
+                                }
                                 handleChange('media', field, draft.trim());
                                 setDocUrlDraft(prev => ({ ...prev, [field]: '' }));
                               }
@@ -416,7 +471,7 @@ export default function AboutMeAdmin() {
               })}
 
               <p className="text-[10px] font-mono text-gray-600 pl-1">
-                Upload: Cloudinary · Paste URL: Google Drive, Dropbox, or any direct link · Toggle = show/hide button on frontend
+                Upload: Google Drive (PDF/image) · Paste URL: Google Drive, Dropbox, or any direct link · Toggle = show/hide button on frontend
               </p>
             </div>
           </div>
@@ -429,31 +484,49 @@ export default function AboutMeAdmin() {
                 {formData.media.slideshowImages.length} IMAGES
               </span>
             </div>
-            <div className="p-4 rounded-sm min-h-40 bg-white/5 border border-sky-300/20 dark:border-white/5">
+            <div
+              className="p-4 rounded-sm min-h-40 bg-white/5 border border-sky-300/20 dark:border-white/5"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={handleSlideshowAreaDrop}
+            >
               <div className="flex flex-wrap gap-3">
                 {formData.media.slideshowImages.length === 0 && uploadingField !== 'slideshowImages' && (
                   <div className="w-full flex flex-col items-center justify-center h-24 text-sky-200/30 dark:text-gray-600">
                     <ImageIcon size={28} className="opacity-30 mb-2" />
-                    <span className="text-xs font-mono">NO IMAGES IN SLIDESHOW</span>
+                    <span className="text-xs font-mono">NO IMAGES — CLICK ADD OR DROP FILES HERE</span>
                   </div>
                 )}
-                {formData.media.slideshowImages.map((img, idx) => (
-                  <div key={idx} className="relative group w-28 h-28 rounded-sm border overflow-hidden bg-white/5 border-sky-300/20 dark:bg-black/60 dark:border-white/10">
-                    <img src={img} alt={`slide-${idx}`} className="w-full h-full object-cover opacity-80 group-hover:opacity-30 transition-opacity duration-300" />
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                {formData.media.slideshowImages.map((img, idx) => {
+                  const isSliding = slideDrag === idx;
+                  const isSlideOver = slideDragOver === idx && slideDrag !== idx;
+                  return (
+                    <div
+                      key={idx}
+                      draggable
+                      onDragStart={(e) => { if (e.dataTransfer.types.includes('Files')) return; handleSlideStart(e, idx); }}
+                      onDragEnter={() => handleSlideEnter(idx)}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.types.includes('Files')) return; e.stopPropagation(); handleSlideDrop(idx); }}
+                      onDragEnd={handleSlideEnd}
+                      className={`relative group w-28 h-28 rounded-sm border overflow-hidden bg-white/5 border-sky-300/20 dark:bg-black/60 dark:border-white/10 cursor-grab select-none transition-all duration-150 ${isSliding ? 'opacity-40 scale-95' : ''} ${isSlideOver ? 'ring-2 ring-sky-400 ring-offset-1 ring-offset-transparent' : ''}`}
+                    >
+                      <img src={img} alt={`slide-${idx}`} draggable={false} className="w-full h-full object-cover opacity-80 transition-opacity" />
+                      {/* Corner delete */}
                       <button
                         type="button"
                         onClick={() => handleRemoveSlideshowImage(idx)}
-                        className="w-9 h-9 flex items-center justify-center bg-red-500 hover:bg-red-400 text-white rounded-full shadow-lg transition-colors"
+                        className="absolute top-1 right-1 w-6 h-6 flex items-center justify-center bg-red-500/90 hover:bg-red-500 text-white rounded-sm opacity-0 group-hover:opacity-100 transition-all z-10"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={11} />
                       </button>
+                      {/* Drag handle + index badge */}
+                      <div className="absolute bottom-0 inset-x-0 h-6 bg-linear-to-t from-black/70 to-transparent flex items-end justify-between px-1.5 pb-0.5">
+                        <GripVertical size={10} className="text-white/40 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <span className="text-[9px] font-mono text-white/60">#{idx + 1}</span>
+                      </div>
                     </div>
-                    <div className="absolute bottom-0 inset-x-0 h-6 bg-linear-to-t from-black/60 to-transparent flex items-end justify-center pb-1">
-                      <span className="text-[9px] font-mono text-white/60">#{idx + 1}</span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
                 <label className="flex flex-col items-center justify-center w-28 h-28 border-2 border-dashed border-sky-400/25 dark:border-purple-500/25 hover:border-sky-400 dark:hover:border-purple-400 text-sky-400/60 dark:text-purple-500/60 hover:text-sky-400 dark:hover:text-purple-400 transition-all rounded-sm cursor-pointer">
                   <input type="file" accept="image/*" multiple className="hidden" onChange={handleMultiUpload} />
                   {uploadingField === 'slideshowImages' ? (
@@ -531,19 +604,13 @@ export default function AboutMeAdmin() {
           <div className="flex gap-5 items-start">
             <div className="shrink-0 space-y-1">
               <label className="text-xs text-sky-200/60 dark:text-gray-500 uppercase block">Logo</label>
-              <label className="w-24 h-24 bg-white/5 border-2 border-dashed border-sky-400/30 dark:border-purple-500/30 hover:border-sky-400 dark:hover:border-purple-400 hover:bg-sky-500/10 dark:hover:bg-purple-500/10 rounded-sm flex items-center justify-center cursor-pointer relative overflow-hidden group transition-all">
-                <input type="file" accept="image/*" className="hidden" onChange={(e) => handleSingleUpload(e, 'education', 'universityLogo')} />
-                {uploadingField === 'universityLogo' ? (
-                  <Loader2 size={20} className="text-sky-400 dark:text-purple-500 animate-spin" />
-                ) : formData.education.universityLogo ? (
-                  <>
-                    <img src={formData.education.universityLogo} alt="University Logo" className="absolute inset-0 w-full h-full object-contain p-2 opacity-90 group-hover:opacity-30 transition-opacity" />
-                    <div className="relative z-10 flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity text-white"><UploadCloud size={16} /><span className="text-[9px] font-mono">CHANGE</span></div>
-                  </>
-                ) : (
-                  <div className="flex flex-col items-center text-sky-200/40 dark:text-gray-500 group-hover:text-sky-400 dark:group-hover:text-purple-400 transition-colors"><UploadCloud size={20} className="mb-1" /><span className="text-[9px] font-mono">LOGO</span></div>
-                )}
-              </label>
+              <DragDropImageUpload
+                imageUrl={formData.education.universityLogo}
+                isUploading={uploadingField === 'universityLogo'}
+                onFileDrop={(file) => handleSingleFileDrop(file, 'education', 'universityLogo')}
+                className="w-24 h-24"
+                placeholder="LOGO"
+              />
             </div>
             <div className="flex-1 space-y-3">
               <div className="space-y-1"><label className="text-xs text-sky-200/60 dark:text-gray-500 uppercase">University Name</label><input type="text" value={formData.education.universityName} onChange={(e) => handleChange('education', 'universityName', e.target.value)} placeholder="KMUTT" className="w-full bg-white/5 border border-sky-300/20 dark:border-white/10 p-3 rounded-sm text-sm text-sky-100 dark:text-white focus:border-sky-400 dark:focus:border-purple-500 outline-none transition-all" /></div>

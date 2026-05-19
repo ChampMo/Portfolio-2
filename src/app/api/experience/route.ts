@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     const body = await request.json();
 
     const updatedExperience = await Experience.findOneAndUpdate({}, body, {
-      new: true,
+      returnDocument: 'after',
       upsert: true,
     });
 

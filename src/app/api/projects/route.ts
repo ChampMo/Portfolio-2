@@ -30,7 +30,7 @@ export async function POST(request: Request) {
       updatedProject = await Project.findByIdAndUpdate(
         _id,
         { title, time, coverImage, tags, blocks },
-        { new: true }
+        { returnDocument: 'after' }
       );
     } else {
       // ➕ ถ้าไม่มี _id แปลว่าเพิ่งสร้างใหม่สดๆ ให้กดปั๊มขึ้นคลาวด์ตัวใหม่ทันที

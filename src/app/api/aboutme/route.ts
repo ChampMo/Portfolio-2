@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     
     const updatedIdentity = await Identity.findOneAndUpdate({}, { $set: body }, {
-      new: true,
+      returnDocument: 'after',
       upsert: true,
       strict: false,
     });

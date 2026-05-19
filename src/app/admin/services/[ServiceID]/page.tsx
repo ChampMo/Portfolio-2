@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { Save, ArrowLeft, CheckSquare, Square, FolderGit2, Loader2 } from 'lucide-react';
 import { useAdmin } from '@/context/AdminContext';
 import { useToast } from '@/context/ToastContext';
+import { useConfirm } from '@/context/ConfirmContext';
 import { useThemeStore } from '@/lib/store/useThemeStore'; // 🌟 1. นำเข้าระบบตรวจสอบธีม
 
 interface ServiceItem {
@@ -37,6 +38,7 @@ export default function SingleServicePage() {
   
   const { setUnsavedPath, isViewMode } = useAdmin();
   const { showToast } = useToast();
+  const openConfirm = useConfirm();
   const theme = useThemeStore((s) => s.theme); // 🌟 2. ดึงสถานะ Light/Dark
   const isLight = theme === 'light';
 
@@ -108,7 +110,9 @@ export default function SingleServicePage() {
     
     try {
       let newServicesList = [...(fullData.services || [])];
-      const existingIndex = newServicesList.findIndex(s => s._id === editingService._id || s.id === editingService.id);
+      const existingIndex = editingService._id
+        ? newServicesList.findIndex(s => s._id === editingService._id)
+        : -1;
       
       if (existingIndex >= 0) {
         newServicesList[existingIndex] = editingService; 
@@ -134,8 +138,8 @@ export default function SingleServicePage() {
     }
   };
 
-  const handleBackToList = () => {
-    if (hasChanges && !confirm('You have unsaved changes. Leave?')) return;
+  const handleBackToList = async () => {
+    if (hasChanges && !await openConfirm({ title: 'Unsaved Changes', message: 'You have unsaved changes. Leave without saving?', variant: 'warning', confirmLabel: 'LEAVE' })) return;
     setUnsavedPath('/admin/services', false);
     router.push('/admin/services');
   };

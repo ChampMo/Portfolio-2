@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     
     // บันทึกแบบ Upsert (มีอันเดียวในระบบ เขียนทับของเดิมเสมอ)
     const updatedMeta = await ProjectMeta.findOneAndUpdate({}, body, {
-      new: true,
+      returnDocument: 'after',
       upsert: true,
     });
 

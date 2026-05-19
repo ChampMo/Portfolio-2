@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Save, Terminal, Code, Database, Layout, Wrench, X, Plus, Loader2 } from 'lucide-react';
+import { Save, Terminal, Code, Database, Layout, Wrench, X, Plus, Loader2, GripVertical } from 'lucide-react';
 import { useAdmin } from '@/context/AdminContext';
 import { useToast } from '@/context/ToastContext'; 
 
@@ -31,9 +31,12 @@ export default function SkillsAdmin() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  
+
+  const [skillDrag, setSkillDrag] = useState<{ skill: string; fromCat: keyof typeof formData.skills; fromIdx: number } | null>(null);
+  const [skillDragOver, setSkillDragOver] = useState<{ toCat: keyof typeof formData.skills; toIdx: number | null } | null>(null);
+
   const { setUnsavedPath, isViewMode } = useAdmin();
-  const { showToast } = useToast(); 
+  const { showToast } = useToast();
 
   // 📡 โหลดข้อมูลจาก Database เมื่อเปิดหน้า
   useEffect(() => {
@@ -128,31 +131,76 @@ export default function SkillsAdmin() {
     }
   };
 
+  const handleSkillDragStart = (e: React.DragEvent, skill: string, fromCat: keyof typeof formData.skills, fromIdx: number) => {
+    e.stopPropagation();
+    setSkillDrag({ skill, fromCat, fromIdx });
+    e.dataTransfer.effectAllowed = 'move';
+  };
+  const handleSkillTagEnter = (e: React.DragEvent, toCat: keyof typeof formData.skills, toIdx: number) => {
+    e.stopPropagation();
+    setSkillDragOver({ toCat, toIdx });
+  };
+  const handleSkillCatEnter = (toCat: keyof typeof formData.skills) => {
+    if (skillDrag) setSkillDragOver(prev => ({ toCat, toIdx: prev?.toCat === toCat ? prev.toIdx : null }));
+  };
+  const handleSkillDrop = (e: React.DragEvent, toCat: keyof typeof formData.skills) => {
+    e.preventDefault();
+    if (!skillDrag) return;
+    const { skill, fromCat, fromIdx } = skillDrag;
+    const toIdx = skillDragOver?.toCat === toCat ? skillDragOver.toIdx : null;
+    setFormData(prev => {
+      const cats = { ...prev.skills } as Record<string, string[]>;
+      if (fromCat === toCat) {
+        if (toIdx === null || toIdx === fromIdx) return prev;
+        const arr = [...cats[fromCat]];
+        const [moved] = arr.splice(fromIdx, 1);
+        arr.splice(toIdx, 0, moved);
+        cats[fromCat] = arr;
+      } else {
+        cats[fromCat] = cats[fromCat].filter((_, i) => i !== fromIdx);
+        const toArr = [...cats[toCat]];
+        toArr.splice(toIdx !== null ? toIdx : toArr.length, 0, skill);
+        cats[toCat] = toArr;
+      }
+      return { ...prev, skills: cats as typeof prev.skills };
+    });
+    setSkillDrag(null);
+    setSkillDragOver(null);
+  };
+  const handleSkillDragEnd = () => { setSkillDrag(null); setSkillDragOver(null); };
+
   // หน้าโหลดข้อมูล
   if (isLoading) {
     return <div className="h-screen flex items-center justify-center text-emerald-400 dark:text-emerald-500 font-mono tracking-widest animate-pulse">LOADING ARSENAL DATA...</div>;
   }
 
+  const categoryConfig = [
+    { key: 'languages' as keyof typeof formData.skills, label: 'PROGRAMMING LANGUAGES', icon: <Code size={16} />, placeholder: 'e.g. Python, TypeScript...' },
+    { key: 'database' as keyof typeof formData.skills, label: 'DATABASE & STORAGE', icon: <Database size={16} />, placeholder: 'e.g. MongoDB, PostgreSQL...' },
+    { key: 'frameworks' as keyof typeof formData.skills, label: 'FRAMEWORKS & LIBRARIES', icon: <Layout size={16} />, placeholder: 'e.g. Next.js, React...' },
+    { key: 'tools' as keyof typeof formData.skills, label: 'DEVOPS & TOOLS', icon: <Wrench size={16} />, placeholder: 'e.g. Git, Docker, Selenium...' },
+  ];
+
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-20">
-      {/* ================= HEADER ================= */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-sky-400/30 dark:border-emerald-500/30 pb-6">
+      {/* STICKY TOPBAR */}
+      <div className="sticky top-0 z-10 backdrop-blur-md pt-4 pb-4 border-b flex items-center justify-between bg-[#001320]/90 border-sky-400/30 dark:bg-gray-950/90 dark:border-emerald-500/30">
         <div>
-          <h1 className="text-3xl font-serif text-sky-100 dark:text-white">Tech Forge Configuration</h1>
-          <p className="text-xs text-emerald-400 dark:text-emerald-500 tracking-widest mt-2">[ MANAGE SKILLS & ARSENAL ]</p>
+          <h1 className="text-2xl font-serif text-sky-100 dark:text-white">Tech Forge Configuration</h1>
+          <p className="text-[10px] text-emerald-400 tracking-widest mt-0.5">[ MANAGE SKILLS & ARSENAL ]</p>
         </div>
         {!isViewMode && (
           <button
             onClick={handleSave}
             disabled={isSaving || !hasChanges}
-            className={`flex items-center gap-2 px-6 py-2.5 font-bold text-xs tracking-widest rounded-sm transition-all border shadow-[0_0_15px_rgba(16,185,129,0.2)] ${
+            className={`flex items-center gap-2 px-5 py-2 font-bold text-xs tracking-widest rounded-sm transition-all border ${
               hasChanges
-                ? 'bg-emerald-500 border-emerald-400 text-[#001320] dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:text-black cursor-pointer'
-                : 'bg-white/5 text-sky-200/40 border-sky-300/20 dark:text-gray-500 dark:border-white/10 cursor-not-allowed'
+                ? 'bg-emerald-500 border-emerald-400 text-[#001320] shadow-[0_0_15px_rgba(16,185,129,0.2)] cursor-pointer'
+                : 'bg-white/5 border-sky-300/20 dark:border-white/10 text-sky-200/40 cursor-not-allowed'
             }`}
           >
-            {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-            {isSaving ? 'SYNCING...' : hasChanges ? 'SAVE CHANGES' : 'UP TO DATE'}
+            {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            {isSaving ? 'SAVING...' : hasChanges ? 'SAVE ALL' : 'UP TO DATE'}
           </button>
         )}
       </div>
@@ -186,105 +234,69 @@ export default function SkillsAdmin() {
           </div>
         </section>
 
-        {/* ================= SECTION 1: SKILL ARRAYS ================= */}
+        {/* ================= SECTION 1: SKILL CATEGORIES ================= */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
-          {/* --- 1. PROGRAMMING LANGUAGES --- */}
-          <section className="border p-6 rounded-sm space-y-4 flex flex-col h-[300px] backdrop-blur-md bg-white/5 border-sky-300/20 dark:bg-black/40 dark:border-white/10">
-            <h2 className="text-sm font-mono text-emerald-400 flex items-center gap-2 border-b border-sky-300/20 dark:border-white/10 pb-3">
-              <Code size={16} /> PROGRAMMING LANGUAGES
-            </h2>
-            <div className="flex gap-2">
-              <input 
-                type="text" value={inputs.languages}
-                onChange={(e) => setInputs(p => ({ ...p, languages: e.target.value }))}
-                onKeyDown={(e) => handleKeyDown(e, 'languages')}
-                placeholder="e.g. Python, TypeScript..."
-                className="w-full bg-white/5 border border-sky-300/20 dark:border-white/10 p-2.5 rounded-sm text-sm text-sky-100 dark:text-white focus:border-emerald-400 outline-none transition-all font-mono" 
-              />
-              <button type="button" onClick={() => handleAddSkill('languages')} className="px-3 bg-white/5 border border-sky-300/20 text-emerald-400 hover:bg-emerald-500/20 rounded-sm dark:border-white/10"><Plus size={16}/></button>
-            </div>
-            <div className="flex flex-wrap gap-2 overflow-y-auto content-start flex-1 pt-2 custom-scrollbar">
-              {formData.skills.languages.map(skill => (
-                <span key={skill} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 border border-emerald-400/30 dark:border-emerald-500/30 text-emerald-300 text-xs font-mono rounded-sm">
-                  {skill} <button type="button" onClick={() => handleRemoveSkill('languages', skill)} className="hover:text-red-400 transition-colors"><X size={12} /></button>
-                </span>
-              ))}
-            </div>
-          </section>
-
-          {/* --- 2. DATABASE --- */}
-          <section className="border p-6 rounded-sm space-y-4 flex flex-col h-[300px] backdrop-blur-md bg-white/5 border-sky-300/20 dark:bg-black/40 dark:border-white/10">
-            <h2 className="text-sm font-mono text-emerald-400 flex items-center gap-2 border-b border-sky-300/20 dark:border-white/10 pb-3">
-              <Database size={16} /> DATABASE & STORAGE
-            </h2>
-            <div className="flex gap-2">
-              <input 
-                type="text" value={inputs.database}
-                onChange={(e) => setInputs(p => ({ ...p, database: e.target.value }))}
-                onKeyDown={(e) => handleKeyDown(e, 'database')}
-                placeholder="e.g. MongoDB, PostgreSQL..."
-                className="w-full bg-white/5 border border-sky-300/20 dark:border-white/10 p-2.5 rounded-sm text-sm text-sky-100 dark:text-white focus:border-emerald-400 outline-none transition-all font-mono" 
-              />
-              <button type="button" onClick={() => handleAddSkill('database')} className="px-3 bg-white/5 border border-sky-300/20 text-emerald-400 hover:bg-emerald-500/20 rounded-sm dark:border-white/10"><Plus size={16}/></button>
-            </div>
-            <div className="flex flex-wrap gap-2 overflow-y-auto content-start flex-1 pt-2 custom-scrollbar">
-              {formData.skills.database.map(skill => (
-                <span key={skill} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 border border-emerald-400/30 dark:border-emerald-500/30 text-emerald-300 text-xs font-mono rounded-sm">
-                  {skill} <button type="button" onClick={() => handleRemoveSkill('database', skill)} className="hover:text-red-400 transition-colors"><X size={12} /></button>
-                </span>
-              ))}
-            </div>
-          </section>
-
-          {/* --- 3. FRAMEWORKS --- */}
-          <section className="border p-6 rounded-sm space-y-4 flex flex-col h-[300px] backdrop-blur-md bg-white/5 border-sky-300/20 dark:bg-black/40 dark:border-white/10">
-            <h2 className="text-sm font-mono text-emerald-400 flex items-center gap-2 border-b border-sky-300/20 dark:border-white/10 pb-3">
-              <Layout size={16} /> FRAMEWORKS & LIBRARIES
-            </h2>
-            <div className="flex gap-2">
-              <input 
-                type="text" value={inputs.frameworks}
-                onChange={(e) => setInputs(p => ({ ...p, frameworks: e.target.value }))}
-                onKeyDown={(e) => handleKeyDown(e, 'frameworks')}
-                placeholder="e.g. Next.js, React, Robot Framework..."
-                className="w-full bg-white/5 border border-sky-300/20 dark:border-white/10 p-2.5 rounded-sm text-sm text-sky-100 dark:text-white focus:border-emerald-400 outline-none transition-all font-mono" 
-              />
-              <button type="button" onClick={() => handleAddSkill('frameworks')} className="px-3 bg-white/5 border border-sky-300/20 text-emerald-400 hover:bg-emerald-500/20 rounded-sm dark:border-white/10"><Plus size={16}/></button>
-            </div>
-            <div className="flex flex-wrap gap-2 overflow-y-auto content-start flex-1 pt-2 custom-scrollbar">
-              {formData.skills.frameworks.map(skill => (
-                <span key={skill} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 border border-emerald-400/30 dark:border-emerald-500/30 text-emerald-300 text-xs font-mono rounded-sm">
-                  {skill} <button type="button" onClick={() => handleRemoveSkill('frameworks', skill)} className="hover:text-red-400 transition-colors"><X size={12} /></button>
-                </span>
-              ))}
-            </div>
-          </section>
-
-          {/* --- 4. TOOLS --- */}
-          <section className="border p-6 rounded-sm space-y-4 flex flex-col h-[300px] backdrop-blur-md bg-white/5 border-sky-300/20 dark:bg-black/40 dark:border-white/10">
-            <h2 className="text-sm font-mono text-emerald-400 flex items-center gap-2 border-b border-sky-300/20 dark:border-white/10 pb-3">
-              <Wrench size={16} /> DEVOPS & TOOLS
-            </h2>
-            <div className="flex gap-2">
-              <input 
-                type="text" value={inputs.tools}
-                onChange={(e) => setInputs(p => ({ ...p, tools: e.target.value }))}
-                onKeyDown={(e) => handleKeyDown(e, 'tools')}
-                placeholder="e.g. Git, Docker, Selenium..."
-                className="w-full bg-white/5 border border-sky-300/20 dark:border-white/10 p-2.5 rounded-sm text-sm text-sky-100 dark:text-white focus:border-emerald-400 outline-none transition-all font-mono" 
-              />
-              <button type="button" onClick={() => handleAddSkill('tools')} className="px-3 bg-white/5 border border-sky-300/20 text-emerald-400 hover:bg-emerald-500/20 rounded-sm dark:border-white/10"><Plus size={16}/></button>
-            </div>
-            <div className="flex flex-wrap gap-2 overflow-y-auto content-start flex-1 pt-2 custom-scrollbar">
-              {formData.skills.tools.map(skill => (
-                <span key={skill} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 border border-emerald-400/30 dark:border-emerald-500/30 text-emerald-300 text-xs font-mono rounded-sm">
-                  {skill} <button type="button" onClick={() => handleRemoveSkill('tools', skill)} className="hover:text-red-400 transition-colors"><X size={12} /></button>
-                </span>
-              ))}
-            </div>
-          </section>
-
+          {categoryConfig.map(({ key, label, icon, placeholder }) => {
+            const isCatOver = skillDragOver?.toCat === key && skillDrag !== null && skillDrag.fromCat !== key;
+            return (
+              <section
+                key={key}
+                className={`border p-6 rounded-sm space-y-4 flex flex-col h-75 backdrop-blur-md bg-white/5 border-sky-300/20 dark:bg-black/40 dark:border-white/10 transition-all duration-150 ${
+                  isCatOver ? 'ring-2 ring-emerald-400/60 bg-emerald-500/5' : ''
+                }`}
+                onDragEnter={() => handleSkillCatEnter(key)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => handleSkillDrop(e, key)}
+              >
+                <h2 className="text-sm font-mono text-emerald-400 flex items-center gap-2 border-b border-sky-300/20 dark:border-white/10 pb-3 shrink-0">
+                  {icon} {label}
+                  <span className="ml-auto text-[10px] text-sky-300/40 font-mono normal-case">drag to reorder or move</span>
+                </h2>
+                <div className="flex gap-2 shrink-0">
+                  <input
+                    type="text" value={inputs[key]}
+                    onChange={(e) => setInputs(p => ({ ...p, [key]: e.target.value }))}
+                    onKeyDown={(e) => handleKeyDown(e, key)}
+                    placeholder={placeholder}
+                    className="w-full bg-white/5 border border-sky-300/20 dark:border-white/10 p-2.5 rounded-sm text-sm text-sky-100 dark:text-white focus:border-emerald-400 outline-none transition-all font-mono"
+                  />
+                  <button type="button" onClick={() => handleAddSkill(key)} className="px-3 bg-white/5 border border-sky-300/20 text-emerald-400 hover:bg-emerald-500/20 rounded-sm dark:border-white/10"><Plus size={16} /></button>
+                </div>
+                <div className="flex flex-wrap gap-2 overflow-y-auto content-start flex-1 custom-scrollbar">
+                  {formData.skills[key].map((skill, idx) => {
+                    const isDraggingThis = skillDrag?.skill === skill && skillDrag?.fromCat === key && skillDrag?.fromIdx === idx;
+                    const isTagOver = skillDragOver?.toCat === key && skillDragOver?.toIdx === idx && !isDraggingThis;
+                    return (
+                      <span
+                        key={`${skill}-${idx}`}
+                        draggable
+                        onDragStart={(e) => handleSkillDragStart(e, skill, key, idx)}
+                        onDragEnter={(e) => handleSkillTagEnter(e, key, idx)}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDragEnd={handleSkillDragEnd}
+                        className={`flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-500/10 border border-emerald-400/30 dark:border-emerald-500/30 text-emerald-300 text-xs font-mono rounded-sm cursor-grab select-none transition-all duration-100 ${
+                          isDraggingThis ? 'opacity-40 scale-95' : ''
+                        } ${isTagOver ? 'ring-1 ring-emerald-400' : ''}`}
+                      >
+                        <GripVertical size={10} className="opacity-40 shrink-0" />
+                        {skill}
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleRemoveSkill(key, skill); }}
+                          className="hover:text-red-400 transition-colors ml-0.5"
+                        >
+                          <X size={12} />
+                        </button>
+                      </span>
+                    );
+                  })}
+                  {formData.skills[key].length === 0 && !isCatOver && (
+                    <p className="text-[11px] font-mono text-sky-200/20 dark:text-gray-700 italic">Drop a skill here to move it to this category</p>
+                  )}
+                </div>
+              </section>
+            );
+          })}
         </div>
       </form>
     </div>

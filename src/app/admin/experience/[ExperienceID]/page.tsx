@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Save, ArrowLeft, Calendar, ListPlus, X, Loader2 } from 'lucide-react';
+import { Save, ArrowLeft, Calendar, ListPlus, X, Loader2, GripVertical, Plus } from 'lucide-react';
 import { useAdmin } from '@/context/AdminContext';
 import { useToast } from '@/context/ToastContext';
+import { useConfirm } from '@/context/ConfirmContext';
 import { useThemeStore } from '@/lib/store/useThemeStore'; // 🌟 1. นำเข้าระบบตรวจสอบธีมกลาง
 
 interface ExperienceItem {
@@ -28,9 +29,13 @@ export default function SingleExperiencePage() {
   const [hasChanges, setHasChanges] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+
+  const [detailDrag, setDetailDrag] = useState<number | null>(null);
+  const [detailDragOver, setDetailDragOver] = useState<number | null>(null);
   
   const { setUnsavedPath, isViewMode } = useAdmin();
   const { showToast } = useToast();
+  const openConfirm = useConfirm();
   const theme = useThemeStore((s) => s.theme); // 🌟 2. เรียกใช้งานสถานะธีม
   const isLight = theme === 'light';
 
@@ -88,13 +93,40 @@ export default function SingleExperiencePage() {
     setEditingExp(prev => prev ? ({ ...prev, details: prev.details.filter((_, idx) => idx !== indexToRemove) }) : prev);
   };
 
+  const handleEditDetail = (idx: number, value: string) => {
+    if (!editingExp) return;
+    const updated = [...editingExp.details];
+    updated[idx] = value;
+    setEditingExp(prev => prev ? ({ ...prev, details: updated }) : prev);
+  };
+
+  const handleDetailDragStart = (e: React.DragEvent, idx: number) => {
+    setDetailDrag(idx);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+  const handleDetailDragEnter = (idx: number) => {
+    if (detailDrag !== null && idx !== detailDrag) setDetailDragOver(idx);
+  };
+  const handleDetailDrop = (targetIdx: number) => {
+    if (detailDrag === null || detailDrag === targetIdx || !editingExp) return;
+    const arr = [...editingExp.details];
+    const [moved] = arr.splice(detailDrag, 1);
+    arr.splice(targetIdx, 0, moved);
+    setEditingExp(prev => prev ? ({ ...prev, details: arr }) : prev);
+    setDetailDrag(null);
+    setDetailDragOver(null);
+  };
+  const handleDetailDragEnd = () => { setDetailDrag(null); setDetailDragOver(null); };
+
   const handleSaveExperience = async () => {
     if (!editingExp || !hasChanges || !fullData) return;
     setIsSaving(true);
     
     try {
       let newExpList = [...(fullData.experiences || [])];
-      const existingIndex = newExpList.findIndex(e => e._id === editingExp._id || e.id === editingExp.id);
+      const existingIndex = editingExp._id
+        ? newExpList.findIndex(e => e._id === editingExp._id)
+        : -1;
       
       if (existingIndex >= 0) {
         newExpList[existingIndex] = editingExp; 
@@ -120,8 +152,8 @@ export default function SingleExperiencePage() {
     }
   };
 
-  const handleBackToList = () => {
-    if (hasChanges && !confirm('You have unsaved changes. Leave?')) return;
+  const handleBackToList = async () => {
+    if (hasChanges && !await openConfirm({ title: 'Unsaved Changes', message: 'You have unsaved changes. Leave without saving?', variant: 'warning', confirmLabel: 'LEAVE' })) return;
     setUnsavedPath('/admin/experience', false);
     router.push('/admin/experience');
   };
@@ -185,41 +217,100 @@ export default function SingleExperiencePage() {
 
         {/* DYNAMIC DETAIL MATRIX SUB-CARD */}
         <div className="p-4 rounded-sm space-y-4 border bg-white/5 border-sky-300/10 dark:border-white/5 dark:bg-black/20">
-          <label className="text-xs tracking-wider flex items-center gap-1.5 font-mono text-sky-200/60 dark:text-gray-400">
-            <ListPlus size={14} className="text-cyan-500" /> 
-            DYNAMIC DETAIL MATRIX (รายละเอียดงาน)
-          </label>
-          
+          <div className="flex items-center justify-between">
+            <label className="text-xs tracking-wider flex items-center gap-1.5 font-mono text-sky-200/60 dark:text-gray-400">
+              <ListPlus size={14} className="text-cyan-500" />
+              DYNAMIC DETAIL MATRIX
+              <span className="text-sky-300/30 dark:text-gray-600">({editingExp.details.length})</span>
+            </label>
+            {editingExp.details.length > 1 && (
+              <span className="text-[10px] font-mono text-sky-300/30 dark:text-gray-600">drag <GripVertical size={10} className="inline" /> to reorder</span>
+            )}
+          </div>
+
+          {/* Add input */}
           <div className="flex gap-2">
-            <input 
+            <input
               type="text"
-              placeholder="Type a core achievement/responsibility and press enter..."
+              placeholder="Add responsibility or achievement, then press Enter..."
               value={currentPointInput}
               onChange={(e) => setCurrentPointInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddPoint())}
-              className="flex-1 bg-white/5 border border-sky-300/20 px-3 py-2 rounded-sm text-xs text-sky-100 focus:border-cyan-400 dark:bg-black/60 dark:border-white/10 outline-none transition-all"
+              className="flex-1 bg-white/5 border border-sky-300/20 px-3 py-2 rounded-sm text-xs text-sky-100 focus:border-cyan-400 dark:bg-black/60 dark:border-white/10 outline-none transition-all font-mono"
             />
-            <button 
+            <button
               type="button" onClick={handleAddPoint}
-              className="px-4 py-2 bg-white/5 border text-xs text-cyan-400 hover:bg-cyan-500/20 transition-all font-mono border-sky-300/20 dark:border-white/10"
+              className="flex items-center gap-1.5 px-4 py-2 bg-white/5 border border-sky-300/20 dark:border-white/10 text-xs text-cyan-400 hover:bg-cyan-500/20 transition-all font-mono rounded-sm shrink-0"
             >
-              + ADD NODE
+              <Plus size={13} /> ADD
             </button>
           </div>
 
+          {/* Detail list */}
           {editingExp.details.length > 0 && (
-            <ul className="space-y-2 pt-2 border-t border-sky-300/10 dark:border-white/5">
-              {editingExp.details.map((pt, idx) => (
-                <li key={idx} className="flex items-start justify-between gap-3 text-xs font-mono p-2 rounded-sm border bg-white/5 border-sky-300/10 hover:border-cyan-400 transition-colors text-sky-200/80 dark:bg-black/30 dark:border-white/5 dark:hover:border-cyan-500/30">
-                  <span className="flex gap-2">
-                    <span className="text-cyan-400 dark:text-cyan-500">›</span> {pt}
-                  </span>
-                  <button type="button" onClick={() => handleRemovePoint(idx)} className="text-sky-300/40 hover:text-red-400 dark:text-gray-600 transition-colors">
-                    <X size={14} />
-                  </button>
-                </li>
-              ))}
+            <ul className="space-y-1.5 pt-2 border-t border-sky-300/10 dark:border-white/5">
+              {editingExp.details.map((pt, idx) => {
+                const isDragging = detailDrag === idx;
+                const isOver = detailDragOver === idx && detailDrag !== idx;
+                return (
+                  <li
+                    key={idx}
+                    onDragEnter={() => handleDetailDragEnter(idx)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => handleDetailDrop(idx)}
+                    className={`relative group flex items-center gap-2 rounded-sm border transition-all duration-100 overflow-visible
+                      ${isDragging ? 'opacity-40 scale-[0.99]' : ''}
+                      bg-white/5 border-sky-300/10 dark:bg-black/30 dark:border-white/5`}
+                  >
+                    {/* insertion line — above */}
+                    {isOver && detailDrag !== null && detailDrag > idx && (
+                      <div className="absolute -top-1 left-0 right-0 h-0.5 bg-cyan-400 rounded-full shadow-[0_0_8px_rgba(34,211,238,0.9)] z-10 pointer-events-none" />
+                    )}
+
+                    {/* drag handle */}
+                    <div
+                      draggable
+                      onDragStart={(e) => handleDetailDragStart(e, idx)}
+                      onDragEnd={handleDetailDragEnd}
+                      className="pl-2 py-2.5 cursor-grab text-sky-300/20 group-hover:text-cyan-400/50 hover:text-cyan-400 transition-colors select-none shrink-0"
+                    >
+                      <GripVertical size={13} />
+                    </div>
+
+                    {/* bullet */}
+                    <span className="text-cyan-400 dark:text-cyan-500 shrink-0 text-sm">›</span>
+
+                    {/* editable text */}
+                    <input
+                      type="text"
+                      value={pt}
+                      onChange={(e) => handleEditDetail(idx, e.target.value)}
+                      className="flex-1 bg-transparent py-2.5 text-xs font-mono text-sky-100 dark:text-gray-200 outline-none placeholder:text-sky-300/20 min-w-0"
+                    />
+
+                    {/* delete */}
+                    <button
+                      type="button"
+                      onClick={() => handleRemovePoint(idx)}
+                      className="pr-2 py-2 text-sky-300/20 hover:text-red-400 dark:text-gray-700 transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+                    >
+                      <X size={14} />
+                    </button>
+
+                    {/* insertion line — below */}
+                    {isOver && detailDrag !== null && detailDrag < idx && (
+                      <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-cyan-400 rounded-full shadow-[0_0_8px_rgba(34,211,238,0.9)] z-10 pointer-events-none" />
+                    )}
+                  </li>
+                );
+              })}
             </ul>
+          )}
+
+          {editingExp.details.length === 0 && (
+            <p className="text-[11px] font-mono text-sky-300/20 dark:text-gray-700 italic text-center py-3">
+              No details yet. Add responsibilities or achievements above.
+            </p>
           )}
         </div>
       </section>

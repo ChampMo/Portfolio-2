@@ -7,6 +7,7 @@ import SectorHud from '@/components/ui/SectorHud';
 import DataSlate from '@/components/ui/DataSlate';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 import VolumeControl from '@/components/ui/VolumeControl';
+import SoundManagerInit from '@/components/ui/SoundManagerInit';
 import MobileMenu from '@/components/ui/MobileMenu'; // 🌟 1. นำเข้าโมดูลเมนูโมบายล์ตัวใหม่
 
 const themeNoFlashScript = `
@@ -81,6 +82,9 @@ export default function RootLayout({
         <div className="fixed inset-x-0 top-0 bottom-0 pointer-events-none z-40 flex items-center justify-center">
           <DataSlate />
         </div>
+
+        {/* Global audio manager — renders nothing, handles BGM + volume sync */}
+        <SoundManagerInit />
 
       </body>
     </html>

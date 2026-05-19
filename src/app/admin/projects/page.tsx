@@ -94,6 +94,7 @@ export default function ProjectsAdmin() {
   }, [hasChanges, setUnsavedPath]);
 
   const handleSaveAll = async () => {
+    if (isViewMode) return;
     if (!hasChanges) return;
     setIsSaving(true);
     try {
@@ -113,6 +114,7 @@ export default function ProjectsAdmin() {
   };
 
   const handleDeleteProject = async (e: React.MouseEvent, id: string) => {
+    if (isViewMode) return;
     e.preventDefault();
     e.stopPropagation();
     if (!await openConfirm({ title: 'Delete Project', message: 'Are you sure you want to delete this project?', variant: 'danger', confirmLabel: 'DELETE' })) return;
@@ -160,7 +162,7 @@ export default function ProjectsAdmin() {
     <div className="max-w-5xl mx-auto space-y-8 pb-20 animate-in fade-in duration-300">
 
       {/* STICKY TOPBAR */}
-      <div className="sticky top-0 z-10 backdrop-blur-md pt-4 pb-4 border-b flex items-center justify-between bg-[#001320]/90 border-sky-400/30 dark:bg-gray-950/90 dark:border-fuchsia-500/30">
+      <div className="sticky top-0 z-30 backdrop-blur-md -mx-6 md:-mx-10 px-6 md:px-10 pt-4 pb-4 border-b flex items-center justify-between bg-[#001320]/90 border-sky-400/30 dark:bg-gray-950/90 dark:border-fuchsia-500/30">
         <div>
           <h1 className="text-2xl font-serif text-sky-100 dark:text-white">Constellation Mapping</h1>
           <p className="text-[10px] text-fuchsia-400 tracking-widest mt-0.5">[ MANAGE PROJECTS ]</p>

@@ -1,13 +1,19 @@
 'use client';
 
-import { useEffect, useState, useCallback, ReactNode, FormEvent } from 'react';
+import { useEffect, useRef, useState, useCallback, ReactNode, FormEvent } from 'react';
 import { ShieldCheck, KeyRound, Mail, Lock, ArrowLeft, Hexagon, Loader2, Eye } from 'lucide-react';
 import { useAdmin } from '@/context/AdminContext';
+import { useAppStore } from '@/lib/store/useAppStore';
+import { audioManager } from '@/lib/audio/audioManager';
+import { useSfx } from '@/hooks/useSfx';
 
 type Stage = 'loading' | 'login' | 'request-otp' | 'enter-otp' | 'reset' | 'authed';
 
 export default function AdminAuthGate({ children }: { children: ReactNode }) {
   const { isViewMode, setViewMode } = useAdmin();
+  const setAdminAuthed = useAppStore((s) => s.setAdminAuthed);
+  const { playSettingClick } = useSfx();
+  const alertedRef = useRef(false);
   const [stage, setStage] = useState<Stage>('loading');
   const [hasPasscode, setHasPasscode] = useState(false);
 
@@ -47,6 +53,19 @@ export default function AdminAuthGate({ children }: { children: ReactNode }) {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, [stage, otpExpiresAt]);
+
+  // Play alert once when auth gate first appears (stage leaves 'loading')
+  useEffect(() => {
+    if (stage !== 'loading' && stage !== 'authed' && !alertedRef.current) {
+      alertedRef.current = true;
+      audioManager.playSfx('alert');
+    }
+  }, [stage]);
+
+  // Notify store when authenticated so SoundManagerInit can start adminbgm
+  useEffect(() => {
+    if (stage === 'authed') setAdminAuthed(true);
+  }, [stage, setAdminAuthed]);
 
   const resetMessages = () => {
     setError(null);
@@ -239,6 +258,7 @@ export default function AdminAuthGate({ children }: { children: ReactNode }) {
             <button
               type="submit"
               disabled={busy}
+              onMouseDown={playSettingClick}
               className="w-full bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-400/50 text-cyan-100 py-3 rounded-sm tracking-[0.3em] uppercase text-xs transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {busy && <Loader2 size={14} className="animate-spin" />}
@@ -247,6 +267,7 @@ export default function AdminAuthGate({ children }: { children: ReactNode }) {
 
             <button
               type="button"
+              onMouseDown={playSettingClick}
               onClick={() => {
                 resetMessages();
                 setStage('request-otp');
@@ -264,7 +285,8 @@ export default function AdminAuthGate({ children }: { children: ReactNode }) {
 
             <button
               type="button"
-              onClick={() => setViewMode(true)}
+              onMouseDown={playSettingClick}
+              onClick={() => { setAdminAuthed(true); setViewMode(true); }}
               className="w-full flex items-center justify-center gap-2 bg-purple-500/5 hover:bg-purple-500/15 border border-purple-500/20 hover:border-purple-400/50 text-purple-300 hover:text-purple-200 py-3 rounded-sm tracking-[0.25em] uppercase text-xs transition-all"
             >
               <Eye size={14} /> BROWSE AS VISITOR
@@ -284,6 +306,7 @@ export default function AdminAuthGate({ children }: { children: ReactNode }) {
             <button
               onClick={requestOtp}
               disabled={busy}
+              onMouseDown={playSettingClick}
               className="w-full bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-400/50 text-cyan-100 py-3 rounded-sm tracking-[0.3em] uppercase text-xs transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {busy ? <Loader2 size={14} className="animate-spin" /> : <Mail size={14} />}
@@ -291,6 +314,7 @@ export default function AdminAuthGate({ children }: { children: ReactNode }) {
             </button>
             <button
               type="button"
+              onMouseDown={playSettingClick}
               onClick={() => {
                 resetMessages();
                 setStage('login');
@@ -332,6 +356,7 @@ export default function AdminAuthGate({ children }: { children: ReactNode }) {
                 </span>
                 <button
                   type="button"
+                  onMouseDown={playSettingClick}
                   onClick={requestOtp}
                   disabled={busy}
                   className="text-cyan-400 hover:text-cyan-300 disabled:opacity-50"
@@ -343,6 +368,7 @@ export default function AdminAuthGate({ children }: { children: ReactNode }) {
             <button
               type="submit"
               disabled={busy}
+              onMouseDown={playSettingClick}
               className="w-full bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-400/50 text-cyan-100 py-3 rounded-sm tracking-[0.3em] uppercase text-xs transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {busy && <Loader2 size={14} className="animate-spin" />}
@@ -350,6 +376,7 @@ export default function AdminAuthGate({ children }: { children: ReactNode }) {
             </button>
             <button
               type="button"
+              onMouseDown={playSettingClick}
               onClick={() => {
                 resetMessages();
                 setStage('login');
@@ -392,6 +419,7 @@ export default function AdminAuthGate({ children }: { children: ReactNode }) {
             <button
               type="submit"
               disabled={busy}
+              onMouseDown={playSettingClick}
               className="w-full bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-400/50 text-cyan-100 py-3 rounded-sm tracking-[0.3em] uppercase text-xs transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {busy && <Loader2 size={14} className="animate-spin" />}

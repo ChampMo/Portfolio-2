@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAppStore } from '@/lib/store/useAppStore';
 import { useThemeStore } from '@/lib/store/useThemeStore';
+import { useSfx } from '@/hooks/useSfx';
 import {
   Hexagon,
   Code2,
@@ -73,6 +74,7 @@ export default function RadarHud() {
 
   const pathname = usePathname();
   const router = useRouter();
+  const { playClick } = useSfx();
 
   const [isMenuOpen, setIsMenuOpen] = useState(true);
 
@@ -106,8 +108,8 @@ export default function RadarHud() {
           className="fixed right-6 top-1/2 -translate-y-1/2 z-50 flex flex-col items-end gap-4 pointer-events-none text-sky-950 dark:text-neutral-400"
         >
           {/* Radar Scanner Decorative -> ปุ่มกดเปิด/ปิด */}
-          <motion.button 
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          <motion.button
+            onClick={() => { playClick(); setIsMenuOpen(!isMenuOpen); }}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             className={`relative w-16 h-16 rounded-full border flex items-center justify-center pointer-events-auto backdrop-blur-sm transition-colors ${
@@ -162,7 +164,7 @@ export default function RadarHud() {
                   variants={menuItemVariants}
                   initial="initial"
                   whileHover="hover" // 🌟 สำคัญมาก: เพื่อส่งต่อสถานะ "hover" ให้กับคอมโพเนนต์ลูกด้านใน
-                  onClick={() => router.push('/')}
+                  onClick={() => { playClick(); router.push('/'); }}
                   // ✂️ เอา gap-2 ออกจากตรงนี้แล้วครับ
                   className="pointer-events-auto flex items-center font-mono text-[10px] tracking-widest border px-3 py-2 bg-white/10 dark:bg-black/60 backdrop-blur-sm rounded-sm transition-all text-sky-200 border-sky-300 hover:bg-sky-600 hover:text-white hover:border-sky-500 dark:text-cyan-400 dark:border-cyan-500/40 dark:hover:bg-cyan-500 dark:hover:text-black dark:hover:border-cyan-400 dark:hover:shadow-[0_0_15px_rgba(34,211,238,0.4)]"
                 >
@@ -185,7 +187,7 @@ export default function RadarHud() {
 
                     return (
                       <motion.div key={coord.id} variants={menuItemVariants}>
-                        <Link href={coord.path}>
+                        <Link href={coord.path} onClick={playClick}>
                           <motion.div
                             whileHover={{ scale: 1.1, x: -10 }}
                             className={`group relative flex items-center gap-4 p-2 rounded-full cursor-pointer backdrop-blur-sm transition-colors ${
@@ -218,7 +220,7 @@ export default function RadarHud() {
                 <motion.button
                   variants={menuItemVariants}
                   whileHover={{ scale: 1.05 }}
-                  onClick={toggleSummaryMode}
+                  onClick={() => { playClick(); toggleSummaryMode(); }}
                   className={`pointer-events-auto flex items-center gap-3 px-4 py-2 border rounded-sm font-mono text-xs tracking-wider transition-all ${
                     isSummaryMode
                       ? (isLight

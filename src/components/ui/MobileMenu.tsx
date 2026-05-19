@@ -8,7 +8,9 @@ import { useAppStore } from '@/lib/store/useAppStore';
 import { useThemeStore } from '@/lib/store/useThemeStore';
 import {
   Menu, X, Hexagon, Code2, Cpu, Clock, FolderGit2, Sun, Moon, Orbit, ShieldCheck,
+  Volume2, Volume1, VolumeX,
 } from 'lucide-react';
+import { useVolumeStore } from '@/lib/store/useVolumeStore';
 
 const menuItems = [
   { name: 'Core (About)', path: '/about', icon: Hexagon },
@@ -23,9 +25,17 @@ export default function MobileMenu() {
   const isSystemBooted = useAppStore((state) => state.isSystemBooted);
   
   const theme = useThemeStore((s: any) => s.theme);
-  const toggle = useThemeStore((s: any) => s.toggle); // 🌟 [FIXED] เปลี่ยนเป็น toggle ให้ตรงกับ Store
+  const toggle = useThemeStore((s: any) => s.toggle);
   const isLight = theme === 'light';
   const pathname = usePathname();
+
+  const volume     = useVolumeStore((s) => s.volume);
+  const isMuted    = useVolumeStore((s) => s.isMuted);
+  const setVolume  = useVolumeStore((s) => s.setVolume);
+  const toggleMute = useVolumeStore((s) => s.toggleMute);
+
+  const effectiveVolume = isMuted ? 0 : volume;
+  const VolumeIcon = effectiveVolume === 0 ? VolumeX : effectiveVolume < 50 ? Volume1 : Volume2;
 
   // 🌟 [ADD] บังคับสลับคลาส .dark ที่ <html> ทุกครั้งที่สเตตัสธีมเปลี่ยน เพื่อให้เบราว์เซอร์แสดงผลทันที
   useEffect(() => {
@@ -130,6 +140,38 @@ export default function MobileMenu() {
 
               {/* ฐานด้านล่าง */}
               <div className={`p-5 border-t space-y-3 bg-white/3 ${isLight ? 'border-sky-300/10' : 'border-white/5'}`}>
+
+                {/* Volume control */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={toggleMute}
+                      className={`flex items-center gap-1.5 font-mono text-[10px] tracking-widest transition-colors ${
+                        isMuted
+                          ? 'text-red-400 hover:text-red-300'
+                          : isLight ? 'text-sky-300/70 hover:text-sky-200' : 'text-cyan-500/60 hover:text-cyan-300'
+                      }`}
+                    >
+                      <VolumeIcon size={11} /> VOLUME
+                    </button>
+                    <span className={`font-mono text-[10px] tabular-nums ${
+                      isMuted ? 'text-red-400/70' : isLight ? 'text-sky-300/50' : 'text-cyan-500/40'
+                    }`}>
+                      {isMuted ? 'MUTED' : `${volume}%`}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={effectiveVolume}
+                    onChange={(e) => setVolume(Number(e.target.value))}
+                    className={`w-full h-1 cursor-pointer rounded-full ${
+                      isMuted ? 'accent-red-500' : isLight ? 'accent-sky-400' : 'accent-cyan-400'
+                    }`}
+                  />
+                </div>
+
                 <button
                   onClick={() => { if (typeof toggle === 'function') toggle(); }}
                   className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 border rounded-sm font-mono text-xs tracking-wider transition-all ${

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAppStore } from '@/lib/store/useAppStore';
 import { useThemeStore } from '@/lib/store/useThemeStore';
+import { useSfx } from '@/hooks/useSfx';
 import { Icon } from '@iconify/react';
 import {
   X, Download, Calendar, Cpu, Code, Database, Layout,
@@ -45,7 +46,8 @@ export default function DataSlate() {
 
   const pathname = usePathname();
   const router = useRouter();
-  
+  const { playClick } = useSfx();
+
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [copied, setCopied] = useState(false);
 
@@ -60,6 +62,7 @@ export default function DataSlate() {
     }
   };
 
+  const [isLoading, setIsLoading] = useState(false);
   const [projects, setProjects] = useState<any[]>([]);
   const [tagsDict, setTagsDict] = useState<Record<string, string>>({});
   const [servicesData, setServicesData] = useState<any>({ sectorData: {}, services: [] });
@@ -101,6 +104,7 @@ export default function DataSlate() {
     if (!isSummaryMode) return;
 
     const fetchAllTelemetry = async () => {
+      setIsLoading(true);
       try {
         const tagsRes = await fetch('/api/tags');
         if (tagsRes.ok) {
@@ -159,6 +163,8 @@ export default function DataSlate() {
 
       } catch (error) {
         console.error('[ TELEMETRY FETCH FAILED ]', error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -282,7 +288,7 @@ export default function DataSlate() {
             {socialItems.length > 0 && (
               <div className="flex gap-1.5">
                 {socialItems.map(s => (
-                  <a key={s.key} href={s.url} target="_blank" rel="noopener noreferrer"
+                  <a key={s.key} href={s.url} target="_blank" rel="noopener noreferrer" onClick={playClick}
                     className={`flex-1 flex items-center justify-center p-2.5 border rounded-sm transition-all ${
                       isLight
                         ? 'border-sky-400/30 text-sky-300/70 hover:bg-sky-500/20 hover:border-sky-400 hover:text-sky-200'
@@ -297,7 +303,7 @@ export default function DataSlate() {
 
             {/* CV Button */}
             {media.cvUrl && media.cvVisible && (
-              <a href={media.cvUrl} target="_blank" rel="noopener noreferrer"
+              <a href={media.cvUrl} target="_blank" rel="noopener noreferrer" onClick={playClick}
                 className={`w-full flex items-center justify-center gap-2 py-3 border font-mono font-bold text-xs tracking-widest transition-all ${
                   isLight
                     ? 'bg-sky-500/10 border-sky-400/60 text-sky-300/80 hover:bg-sky-500 hover:text-white hover:border-sky-400'
@@ -310,7 +316,7 @@ export default function DataSlate() {
 
             {/* Transcript Button */}
             {media.transcriptUrl && media.transcriptVisible && (
-              <a href={media.transcriptUrl} target="_blank" rel="noopener noreferrer"
+              <a href={media.transcriptUrl} target="_blank" rel="noopener noreferrer" onClick={playClick}
                 className={`w-full flex items-center justify-center gap-2 py-3 border font-mono font-bold text-xs tracking-widest transition-all ${
                   isLight
                     ? 'bg-sky-500/10 border-sky-400/60 text-sky-300/80 hover:bg-sky-500 hover:text-white hover:border-sky-400'
@@ -533,6 +539,7 @@ export default function DataSlate() {
       <div className="flex items-center justify-between">
         <button
           onClick={() => {
+            playClick();
             setFocusedProjectId(null);
             router.push('/projects');
           }}
@@ -543,7 +550,7 @@ export default function DataSlate() {
           <ChevronLeft size={14} /> BACK TO CONSTELLATION
         </button>
         <button
-          onClick={() => handleShare(proj)}
+          onClick={() => { playClick(); handleShare(proj); }}
           className={`flex items-center gap-1.5 text-xs font-mono tracking-widest px-3 py-1.5 rounded-sm border transition-all ${
             copied
               ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10'
@@ -685,6 +692,7 @@ export default function DataSlate() {
             <button
               key={index}
               onClick={() => {
+                playClick();
                 router.push(`/projects/${String(proj._id)}`);
                 setFocusedProjectId(String(proj._id));
               }}
@@ -731,7 +739,82 @@ export default function DataSlate() {
     );
   };
 
+  // ========================================================
+  // 🛠️ RENDER 0: LOADING SKELETON
+  // ========================================================
+  const renderLoader = () => {
+    const skBar = (cls: string, delay = 0) => (
+      <motion.div
+        className={`h-3 rounded-sm ${isLight ? 'bg-sky-400/20' : 'bg-cyan-400/15'} ${cls}`}
+        animate={{ opacity: [0.35, 0.85, 0.35] }}
+        transition={{ duration: 1.4, repeat: Infinity, delay }}
+      />
+    );
+
+    return (
+      <div className="relative min-h-80 overflow-hidden">
+        {/* Scan line */}
+        <motion.div
+          className={`absolute inset-x-0 h-px z-10 pointer-events-none ${isLight ? 'bg-sky-400' : 'bg-cyan-400'}`}
+          style={{ boxShadow: isLight ? '0 0 10px 3px rgba(56,189,248,0.7)' : '0 0 10px 3px rgba(34,211,238,0.7)' }}
+          animate={{ top: ['-1%', '103%'] }}
+          transition={{ duration: 2.2, repeat: Infinity, ease: 'linear', repeatDelay: 0.4 }}
+        />
+
+        {/* Grid overlay */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.035]"
+          style={{
+            backgroundImage: isLight
+              ? 'linear-gradient(rgba(56,189,248,1) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,1) 1px, transparent 1px)'
+              : 'linear-gradient(rgba(34,211,238,1) 1px, transparent 1px), linear-gradient(90deg, rgba(34,211,238,1) 1px, transparent 1px)',
+            backgroundSize: '28px 28px',
+          }}
+        />
+
+        <div className="relative space-y-5">
+          {/* Header */}
+          <div className={`space-y-3 pb-5 border-b ${isLight ? 'border-sky-300/20' : 'border-cyan-500/20'}`}>
+            <div className="flex items-center gap-2.5">
+              <motion.div
+                className={`w-2 h-2 rounded-full ${isLight ? 'bg-sky-400' : 'bg-cyan-400'}`}
+                animate={{ opacity: [1, 0.2, 1] }}
+                transition={{ duration: 0.9, repeat: Infinity }}
+              />
+              <span className={`font-mono text-xs tracking-[0.25em] ${isLight ? 'text-sky-400/70' : 'text-cyan-400/60'}`}>
+                ACQUIRING SIGNAL...
+              </span>
+            </div>
+            {skBar('w-64', 0)}
+            {skBar('w-44', 0.15)}
+          </div>
+
+          {/* Body rows */}
+          {skBar('w-full', 0.05)}
+          {skBar('w-5/6', 0.12)}
+          {skBar('w-full', 0.18)}
+          {skBar('w-4/5', 0.24)}
+          {skBar('w-full', 0.30)}
+          {skBar('w-3/4', 0.36)}
+
+          {/* Card grid */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 pt-4">
+            {[0.1, 0.22, 0.34, 0.46].map((d, i) => (
+              <motion.div
+                key={i}
+                className={`h-18.5 rounded-sm border ${isLight ? 'bg-sky-500/5 border-sky-300/20' : 'bg-cyan-500/4 border-cyan-500/15'}`}
+                animate={{ opacity: [0.35, 0.75, 0.35] }}
+                transition={{ duration: 1.4, repeat: Infinity, delay: d }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderContent = () => {
+    if (isLoading) return renderLoader();
     if (pathname.startsWith('/projects/')) {
       const projId = pathname.split('/').pop();
       const proj = projId ? projects.find((p) => String(p._id) === projId) : null;
@@ -765,7 +848,7 @@ export default function DataSlate() {
           {/* Backdrop scrim */}
           <div
             className="absolute inset-0 bg-slate-900/40 dark:bg-black/50 pointer-events-auto transition-all"
-            onClick={handleClose}
+            onClick={() => { playClick(); handleClose(); }}
           />
 
           {/* Frosted-glass modal */}
@@ -803,7 +886,7 @@ export default function DataSlate() {
                 );
               })()}
               <button
-                onClick={handleClose}
+                onClick={() => { playClick(); handleClose(); }}
                 className={`transition-colors ${isLight ? 'text-sky-400 hover:text-white' : 'text-gray-400 hover:text-cyan-400'}`}
               >
                 <X size={24} />

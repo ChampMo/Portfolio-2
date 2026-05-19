@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 
 import { profileData } from '@/lib/mock/profile';
+import { useSfx } from '@/hooks/useSfx';
 
 type Stat = { label: string; value: string };
 
@@ -206,6 +207,7 @@ export default function SectorHud() {
     },
   };
 
+  const { playSettingClick } = useSfx();
   const sector = SECTORS[pathname] ?? SECTORS['/'];
   const Icon = sector.icon;
 
@@ -294,7 +296,7 @@ export default function SectorHud() {
 
               {/* 🌟 ปุ่มสลับลูกศร */}
               <div
-                onClick={() => setIsCollapsed(!isCollapsed)}
+                onClick={() => { playSettingClick(); setIsCollapsed(!isCollapsed); }}
                 className={`flex items-center justify-center py-1.5 cursor-pointer transition-colors ${
                   isLight ? 'hover:bg-sky-300/10' : 'hover:bg-white/5'
                 }`}
@@ -316,6 +318,7 @@ export default function SectorHud() {
             <Link
               href="/admin"
               title="Admin Access"
+              onClick={playSettingClick}
               className={`fixed top-4 right-4 z-300 w-10 h-10 rounded-full flex items-center justify-center border backdrop-blur-md transition-all pointer-events-auto ${
                 isLight
                   ? 'bg-white/70 border-purple-400/40 text-purple-500 hover:bg-purple-100 hover:border-purple-500/70 shadow-[0_4px_20px_rgba(168,85,247,0.15)]'

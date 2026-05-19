@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Volume2, VolumeX, Volume1 } from 'lucide-react';
 import { useThemeStore } from '@/lib/store/useThemeStore';
 import { useVolumeStore } from '@/lib/store/useVolumeStore';
 import { useAppStore } from '@/lib/store/useAppStore';
 import { usePathname } from 'next/navigation';
+import { useSfx } from '@/hooks/useSfx';
 
 export default function VolumeControl({ className = '' }: { className?: string }) {
   const volume = useVolumeStore((s) => s.volume);
@@ -18,6 +19,8 @@ export default function VolumeControl({ className = '' }: { className?: string }
   const pathname = usePathname();
   const isLight = theme === 'light';
 
+  const { playSettingClick } = useSfx();
+
   const [expanded, setExpanded] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => { setHydrated(true); }, []);
@@ -26,14 +29,6 @@ export default function VolumeControl({ className = '' }: { className?: string }
   const isAdmin = pathname?.startsWith('/admin');
 
   const effectiveVolume = isMuted ? 0 : volume;
-
-  useEffect(() => {
-    const audios = document.querySelectorAll<HTMLAudioElement>('audio');
-    audios.forEach((a) => {
-      a.volume = effectiveVolume / 100;
-      a.muted = isMuted;
-    });
-  }, [effectiveVolume, isMuted]);
 
   if (!hydrated || isOnIntro || isAdmin) return null;
 
@@ -85,6 +80,7 @@ export default function VolumeControl({ className = '' }: { className?: string }
               min={0}
               max={100}
               value={effectiveVolume}
+              onMouseDown={playSettingClick}
               onChange={(e) => setVolume(Number(e.target.value))}
               className={`flex-1 h-1 cursor-pointer min-w-0 ${
                 isMuted ? 'accent-red-500' : 'accent-cyan-400'
@@ -124,7 +120,7 @@ export default function VolumeControl({ className = '' }: { className?: string }
             />
           </svg>
           <button
-            onClick={toggleMute}
+            onClick={() => { playSettingClick(); toggleMute(); }}
             title={isMuted ? 'Unmute' : 'Mute'}
             className={`relative z-10 flex items-center justify-center transition-all ${
               expanded ? 'scale-100' : 'scale-95'

@@ -95,6 +95,7 @@ export default function AboutMeAdmin() {
   };
 
   const handleSave = async (e?: React.SyntheticEvent) => {
+    if (isViewMode) return;
     if (e) e.preventDefault();
     if (!hasChanges) return;
     setIsSaving(true);
@@ -133,6 +134,7 @@ export default function AboutMeAdmin() {
     category: keyof FormData,
     field: string
   ) => {
+    if (isViewMode) return;
     if (!e.target.files || e.target.files.length === 0) return;
     setUploadingField(field);
     const isDoc = DOC_FIELDS.includes(field);
@@ -156,6 +158,7 @@ export default function AboutMeAdmin() {
   };
 
   const handleMultiUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isViewMode) return;
     if (!e.target.files || e.target.files.length === 0) return;
     setUploadingField('slideshowImages');
     try {
@@ -174,6 +177,7 @@ export default function AboutMeAdmin() {
   };
 
   const handleRemoveSlideshowImage = (indexToRemove: number) => {
+    if (isViewMode) return;
     const urlToRemove = formData.media.slideshowImages[indexToRemove];
     if (urlToRemove) setPendingDeletes(prev => [...prev, urlToRemove]);
     setFormData(prev => ({
@@ -183,6 +187,7 @@ export default function AboutMeAdmin() {
   };
 
   const handleSingleFileDrop = async (file: File, category: keyof FormData, field: string) => {
+    if (isViewMode) return;
     setUploadingField(field);
     try {
       const oldUrl = (formData[category] as Record<string, unknown>)[field];
@@ -200,6 +205,7 @@ export default function AboutMeAdmin() {
   };
 
   const handleMultiFileDrop = async (files: File[]) => {
+    if (isViewMode) return;
     setUploadingField('slideshowImages');
     try {
       const uploadedUrls = await Promise.all(files.map(f => uploadToCloudinary(f)));
@@ -279,7 +285,7 @@ export default function AboutMeAdmin() {
       </div>
 
       {/* STICKY TOPBAR */}
-      <div className="sticky top-0 z-10 backdrop-blur-md pt-4 pb-4 border-b flex items-center justify-between bg-[#001320]/90 border-sky-400/30 dark:bg-gray-950/90 dark:border-purple-500/30">
+      <div className="sticky top-0 z-30 backdrop-blur-md -mx-6 md:-mx-10 px-6 md:px-10 pt-4 pb-4 border-b flex items-center justify-between bg-[#001320]/90 border-sky-400/30 dark:bg-gray-950/90 dark:border-purple-500/30">
         <div>
           <h1 className="text-2xl font-serif text-sky-100 dark:text-white">Identity Configuration</h1>
           <p className="text-[10px] text-sky-400 dark:text-purple-500 tracking-widest mt-0.5">[ MANAGE ABOUT ME DATA ]</p>

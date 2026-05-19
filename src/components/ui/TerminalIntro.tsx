@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '@/lib/store/useAppStore';
+import { useSfx } from '@/hooks/useSfx';
+import { audioManager } from '@/lib/audio/audioManager';
 
 const bootSequence = [
   "> INITIATING GUEST PROTOCOL... [WELCOME]",
@@ -55,7 +57,9 @@ function preloadImages(urls: string[]): Promise<void> {
 export default function TerminalIntro({ onLaunch }: TerminalIntroProps) {
   const callsign = useAppStore((s) => s.callsign);
   const setCallsign = useAppStore((s) => s.setCallsign);
+  const { playClick, playSfx } = useSfx();
 
+  const [waiting, setWaiting] = useState(true); // gate: wait for first interaction
   const [lines, setLines] = useState<string[]>([]);
   const [showCallsign, setShowCallsign] = useState(false);
   const [showButton, setShowButton] = useState(false);
@@ -69,6 +73,9 @@ export default function TerminalIntro({ onLaunch }: TerminalIntroProps) {
   const handleLaunch = () => {
     if (isLaunching) return;
     setIsLaunching(true);
+    audioManager.playWithCallback('transition', () => {
+      audioManager.playBgm('main');
+    });
     setTimeout(onLaunch, 100);
   };
 
@@ -89,27 +96,50 @@ export default function TerminalIntro({ onLaunch }: TerminalIntroProps) {
   };
 
   const handleCallsignKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') confirmCallsign();
+    if (e.key === 'Enter') { playClick(); confirmCallsign(); }
   };
+
+  // Gate: wait for first interaction so browser audio policy is satisfied,
+  // then immediately play alert and start the boot sequence.
+  useEffect(() => {
+    if (!waiting) return;
+    const start = () => {
+      audioManager.unlock();
+      audioManager.playSfx('alert');
+      setWaiting(false);
+    };
+    window.addEventListener('keydown',    start, { once: true });
+    window.addEventListener('click',      start, { once: true });
+    window.addEventListener('touchstart', start, { once: true, passive: true });
+    return () => {
+      window.removeEventListener('keydown',    start);
+      window.removeEventListener('click',      start);
+      window.removeEventListener('touchstart', start);
+    };
+  }, [waiting]);
 
   // Start preloading textures immediately — runs in parallel with the boot sequence
   useEffect(() => {
     preloadImages(PRELOAD_URLS).then(() => setAssetsReady(true));
   }, []);
 
-  // Boot sequence line-by-line
+  // Boot sequence line-by-line — play logup.ogg on each new line
   useEffect(() => {
+    if (waiting) return; // don't start until user has interacted
+    let idx = 0;
     const interval = setInterval(() => {
-      setLines((prev) => {
-        const next = prev.length;
-        if (next < bootSequence.length) return [...prev, bootSequence[next]];
-        clearInterval(interval);
-        setTimeout(() => setShowCallsign(true), 500);
-        return prev;
-      });
+      if (idx < bootSequence.length) {
+        playSfx('logup', 0.5);
+        setLines((prev) => [...prev, bootSequence[idx]]);
+        idx++;
+        if (idx === bootSequence.length) {
+          clearInterval(interval);
+          setTimeout(() => setShowCallsign(true), 500);
+        }
+      }
     }, 400);
     return () => clearInterval(interval);
-  }, []);
+  }, [waiting, playSfx]);
 
   // Focus callsign input when it appears
   useEffect(() => {
@@ -170,6 +200,29 @@ export default function TerminalIntro({ onLaunch }: TerminalIntroProps) {
       {/* Random char streams */}
       {pulses.map((p) => <RandomCharStream key={p.id} pulse={p} />)}
 
+      {/* Press-any-key gate — fades out after first interaction */}
+      <AnimatePresence>
+        {waiting && (
+          <motion.div
+            key="press-any-key"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.4 } }}
+            className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-6 pointer-events-none select-none"
+          >
+            <p className="text-green-600 text-xs tracking-[0.4em] font-mono">
+              ORBITAL DEFENSE SYSTEM v4.2.1
+            </p>
+            <p className="text-green-400 text-sm md:text-base tracking-[0.3em] font-mono drop-shadow-[0_0_12px_rgba(0,255,0,0.9)] animate-pulse">
+              [ PRESS ANY KEY TO BEGIN ]
+            </p>
+            <p className="text-green-800 text-xs tracking-widest font-mono">
+              AWAITING OPERATOR INPUT...
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="relative z-10 w-full max-w-2xl px-6 space-y-2">
         {/* Boot sequence lines */}
         {lines.map((line, i) => (
@@ -227,7 +280,7 @@ export default function TerminalIntro({ onLaunch }: TerminalIntroProps) {
 
                 {/* Confirm button */}
                 <button
-                  onClick={confirmCallsign}
+                  onClick={() => { playClick(); confirmCallsign(); }}
                   className="px-4 py-2 border border-green-500 text-green-400 text-xs tracking-widest hover:bg-green-500/15 transition-all"
                 >
                   CONFIRM
@@ -278,7 +331,7 @@ export default function TerminalIntro({ onLaunch }: TerminalIntroProps) {
 
               <div className="flex justify-center pt-4">
                 <button
-                  onClick={handleLaunch}
+                  onClick={() => { playClick(); handleLaunch(); }}
                   disabled={isLaunching || !assetsReady}
                   className="group relative px-8 py-3 border border-green-500 bg-transparent text-green-500 font-bold tracking-widest uppercase transition-all duration-300 hover:bg-green-500 hover:text-black hover:shadow-[0_0_20px_rgba(0,255,0,0.6)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-green-500 disabled:hover:shadow-none"
                 >

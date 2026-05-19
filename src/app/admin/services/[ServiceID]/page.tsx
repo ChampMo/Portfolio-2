@@ -91,6 +91,7 @@ export default function SingleServicePage() {
   }, [editingService, originalService, setUnsavedPath]);
 
   const handleToggleProject = (projectId: string) => {
+    if (isViewMode) return;
     if (!editingService) return;
     setEditingService((prev) => {
       if (!prev) return prev;
@@ -105,6 +106,7 @@ export default function SingleServicePage() {
   };
 
   const handleSaveService = async () => {
+    if (isViewMode) return;
     if (!editingService || !hasChanges || !fullData) return;
     setIsSaving(true);
     
@@ -155,7 +157,7 @@ export default function SingleServicePage() {
       
       {/* STICKY HEADER CONTROLS */}
       {/* 🌟 [FIXED] เปลี่ยนสีพื้นหลังแถบสติ๊กกี้โหมดสว่างให้เนียนเข้ากับสีอวกาศห้วงลึก #001320 */}
-      <div className="sticky top-0 z-10 backdrop-blur-md pt-4 pb-4 border-b flex items-center justify-between bg-[#001320]/90 border-sky-400/30 dark:bg-gray-950/90 dark:border-amber-500/30">
+      <div className="sticky top-0 z-30 backdrop-blur-md -mx-6 md:-mx-10 px-6 md:px-10 pt-4 pb-4 border-b flex items-center justify-between bg-[#001320]/90 border-sky-400/30 dark:bg-gray-950/90 dark:border-amber-500/30">
         <button onClick={handleBackToList} className="flex items-center gap-2 text-sky-200/50 hover:text-amber-500 transition-colors text-xs font-mono tracking-widest dark:text-gray-400">
           <ArrowLeft size={16} /> BACK TO ORBIT
         </button>

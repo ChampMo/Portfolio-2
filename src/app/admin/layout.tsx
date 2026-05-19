@@ -4,13 +4,14 @@ import { useState, useEffect } from 'react'; // 🌟 1. นำเข้า useEf
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion'; 
-import { User, Code2, Cpu, Clock, FolderGit2, LogOut, Hexagon, Menu, X, Sun, Moon, Eye, EyeOff } from 'lucide-react';
+import { User, Code2, Cpu, Clock, FolderGit2, LogOut, Hexagon, Menu, X, Sun, Moon, Eye, EyeOff, Volume2, VolumeX, Volume1 } from 'lucide-react';
 // นำเข้า Context และ Store
 import { AdminProvider, useAdmin } from '@/context/AdminContext';
 import { ToastProvider } from '@/context/ToastContext';
 import { ConfirmProvider } from '@/context/ConfirmContext';
 import AdminAuthGate from '@/components/admin/AdminAuthGate';
-import { useThemeStore } from '@/lib/store/useThemeStore'; 
+import { useThemeStore } from '@/lib/store/useThemeStore';
+import { useVolumeStore } from '@/lib/store/useVolumeStore';
 
 const adminMenu = [
   { name: 'Dashboard', path: '/admin', icon: Hexagon },
@@ -26,8 +27,16 @@ function SidebarNavigation({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: 
   const { unsavedPaths, isViewMode, setViewMode } = useAdmin();
 
   const theme = useThemeStore((s: any) => s.theme);
-  const toggle = useThemeStore((s: any) => s.toggle); 
+  const toggle = useThemeStore((s: any) => s.toggle);
   const isLight = theme === 'light';
+
+  const volume    = useVolumeStore((s) => s.volume);
+  const isMuted   = useVolumeStore((s) => s.isMuted);
+  const setVolume = useVolumeStore((s) => s.setVolume);
+  const toggleMute = useVolumeStore((s) => s.toggleMute);
+
+  const effectiveVolume = isMuted ? 0 : volume;
+  const VolumeIcon = effectiveVolume === 0 ? VolumeX : effectiveVolume < 50 ? Volume1 : Volume2;
 
   // 🌟 2. [ADD EFFECT]: บังคับให้แท็ก <html> สลับคลาส .dark ตามสถานะ Store และบันทึกลงระบบจำถาวร
   useEffect(() => {
@@ -87,6 +96,31 @@ function SidebarNavigation({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: 
             <Eye size={12} className="animate-pulse shrink-0" /> READ-ONLY MODE
           </div>
         )}
+
+        {/* Volume control */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-[10px] tracking-widest text-sky-300/50 dark:text-gray-600 uppercase">
+            <button
+              type="button"
+              onClick={toggleMute}
+              className="flex items-center gap-1.5 hover:text-sky-200 dark:hover:text-gray-400 transition-colors"
+            >
+              <VolumeIcon size={11} />
+              VOLUME
+            </button>
+            <span className={isMuted ? 'text-red-400/70' : 'text-sky-300/50 dark:text-gray-600'}>
+              {isMuted ? 'MUTED' : `${volume}%`}
+            </span>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={effectiveVolume}
+            onChange={(e) => setVolume(Number(e.target.value))}
+            className={`w-full h-1 cursor-pointer rounded-full ${isMuted ? 'accent-red-500' : 'accent-sky-400 dark:accent-cyan-400'}`}
+          />
+        </div>
 
         <button
           type="button"

@@ -22,6 +22,7 @@ export interface RemotePlayer {
 interface AppState {
   isSystemBooted: boolean;
   isSummaryMode: boolean;
+  isAdminAuthed: boolean;
   currentPlanet: string | null;
   focusedProjectId: string | null;
   callsign: string;
@@ -29,6 +30,7 @@ interface AppState {
   remotePlayers: RemotePlayer[];
 
   setSystemBooted: (status: boolean) => void;
+  setAdminAuthed: (v: boolean) => void;
   toggleSummaryMode: () => void;
   setSummaryMode: (open: boolean) => void;
   setCurrentPlanet: (planetId: string | null) => void;
@@ -45,6 +47,7 @@ interface AppState {
 export const useAppStore = create<AppState>((set) => ({
   isSystemBooted: false,
   isSummaryMode: false,
+  isAdminAuthed: false,
   currentPlanet: null,
   focusedProjectId: null,
   callsign: generateCallsign(),
@@ -52,6 +55,7 @@ export const useAppStore = create<AppState>((set) => ({
   remotePlayers: [],
 
   setSystemBooted: (status) => set({ isSystemBooted: status }),
+  setAdminAuthed: (v) => set({ isAdminAuthed: v }),
   toggleSummaryMode: () => set((state) => ({ isSummaryMode: !state.isSummaryMode })),
   setSummaryMode: (open) => set({ isSummaryMode: open }),
   setCurrentPlanet: (planetId) => set({ currentPlanet: planetId }),

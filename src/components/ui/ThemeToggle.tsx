@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Sun, Moon } from 'lucide-react';
 import { useThemeStore } from '@/lib/store/useThemeStore';
 import { useAppStore } from '@/lib/store/useAppStore';
+import { useSfx } from '@/hooks/useSfx';
 
 export default function ThemeToggle({
   className = '',
@@ -17,6 +18,7 @@ export default function ThemeToggle({
   const toggle = useThemeStore((s) => s.toggle);
   const isSystemBooted = useAppStore((s) => s.isSystemBooted);
   const pathname = usePathname();
+  const { playSettingClick } = useSfx();
 
   useEffect(() => {
     hydrate();
@@ -35,7 +37,7 @@ export default function ThemeToggle({
   return (
     <button
       type="button"
-      onClick={toggle}
+      onClick={() => { playSettingClick(); toggle(); }}
       aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
       title={isDark ? 'Light mode' : 'Dark mode'}
       className={`fixed top-4 right-16 z-300 w-10 h-10 rounded-full flex items-center justify-center border backdrop-blur-md transition-all

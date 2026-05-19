@@ -126,6 +126,7 @@ export default function SingleProjectPage() {
   }, [editingProject, originalProject, setUnsavedPath]);
 
   const handleSaveProject = async () => {
+    if (isViewMode) return;
     if (!editingProject || !hasChanges) return;
     setIsSavingProject(true);
     try {
@@ -165,6 +166,7 @@ export default function SingleProjectPage() {
   };
 
   const handleCreateNewTag = async () => {
+    if (isViewMode) return;
     const trimmed = newTagName.trim();
     if (!trimmed) return;
 
@@ -193,6 +195,7 @@ export default function SingleProjectPage() {
   };
 
   const handleDeleteTag = async (tagId: string) => {
+    if (isViewMode) return;
     setIsDeletingTag(tagId);
     try {
       const res = await fetch('/api/tags', {
@@ -213,6 +216,7 @@ export default function SingleProjectPage() {
   };
 
   const handleToggleTag = (tagId: string) => {
+    if (isViewMode) return;
     if (!editingProject) return;
     const isSelected = editingProject.tags?.includes(tagId);
     setEditingProject(prev => {
@@ -223,6 +227,7 @@ export default function SingleProjectPage() {
 
   // Cover image upload (supports drag-drop via DragDropImageUpload component)
   const handleCoverFileDrop = async (file: File) => {
+    if (isViewMode) return;
     setUploadingField('cover');
     try {
       const url = await uploadToCloudinary(file);
@@ -236,6 +241,7 @@ export default function SingleProjectPage() {
 
   // Gallery: upload files (from file input or filesystem drag-drop)
   const handleGalleryFileDrop = async (files: File[], blockId: string) => {
+    if (isViewMode) return;
     const validFiles = files.filter(f => f.type.startsWith('image/'));
     if (!validFiles.length) return;
     setUploadingField(blockId);
@@ -262,6 +268,7 @@ export default function SingleProjectPage() {
   };
 
   const handleRemoveGalleryImage = (blockId: string, indexToRemove: number) => {
+    if (isViewMode) return;
     setEditingProject(prev => {
       if (!prev) return prev;
       return {
@@ -493,7 +500,7 @@ export default function SingleProjectPage() {
       )}
 
       {/* STICKY HEADER */}
-      <div className="sticky top-0 z-10 backdrop-blur-md pt-4 pb-4 border-b flex items-center justify-between bg-[#001320]/90 border-sky-400/30 dark:bg-gray-950/90 dark:border-fuchsia-500/30">
+      <div className="sticky top-0 z-30 backdrop-blur-md -mx-6 md:-mx-10 px-6 md:px-10 pt-4 pb-4 border-b flex items-center justify-between bg-[#001320]/90 border-sky-400/30 dark:bg-gray-950/90 dark:border-fuchsia-500/30">
         <button onClick={handleBackToList} className="flex items-center gap-2 text-sky-200/50 hover:text-fuchsia-400 transition-colors text-xs font-mono tracking-widest">
           <ArrowLeft size={16} /> BACK TO ORBIT
         </button>

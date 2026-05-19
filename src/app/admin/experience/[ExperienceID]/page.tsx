@@ -82,6 +82,7 @@ export default function SingleExperiencePage() {
   }, [editingExp, originalExp, setUnsavedPath]);
 
   const handleAddPoint = () => {
+    if (isViewMode) return;
     const point = currentPointInput.trim();
     if (!point || !editingExp) return;
     setEditingExp(prev => prev ? ({ ...prev, details: [...prev.details, point] }) : prev);
@@ -89,6 +90,7 @@ export default function SingleExperiencePage() {
   };
 
   const handleRemovePoint = (indexToRemove: number) => {
+    if (isViewMode) return;
     if (!editingExp) return;
     setEditingExp(prev => prev ? ({ ...prev, details: prev.details.filter((_, idx) => idx !== indexToRemove) }) : prev);
   };
@@ -119,6 +121,7 @@ export default function SingleExperiencePage() {
   const handleDetailDragEnd = () => { setDetailDrag(null); setDetailDragOver(null); };
 
   const handleSaveExperience = async () => {
+    if (isViewMode) return;
     if (!editingExp || !hasChanges || !fullData) return;
     setIsSaving(true);
     
@@ -169,7 +172,7 @@ export default function SingleExperiencePage() {
       
       {/* STICKY HEADER CONTROLS */}
       {/* 🌟 [FIXED] ดึงสไตล์สติ๊กกี้สีอวกาศห้วงลึกของรถส้มทองมาใช้กับขั้วระบบโครโน่ */}
-      <div className="sticky top-0 z-10 backdrop-blur-md pt-4 pb-4 border-b flex items-center justify-between bg-[#001320]/90 border-sky-400/30 dark:bg-gray-950/90 dark:border-cyan-500/30">
+      <div className="sticky top-0 z-30 backdrop-blur-md -mx-6 md:-mx-10 px-6 md:px-10 pt-4 pb-4 border-b flex items-center justify-between bg-[#001320]/90 border-sky-400/30 dark:bg-gray-950/90 dark:border-cyan-500/30">
         <button onClick={handleBackToList} className="flex items-center gap-2 text-sky-200/50 hover:text-cyan-500 transition-colors text-xs font-mono tracking-widest dark:text-gray-400">
           <ArrowLeft size={16} /> BACK TO ORBIT
         </button>

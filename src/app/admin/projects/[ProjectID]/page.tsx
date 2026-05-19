@@ -60,6 +60,11 @@ export default function SingleProjectPage() {
   const [isSavingProject, setIsSavingProject] = useState(false);
   const [uploadingField, setUploadingField] = useState<string | null>(null);
 
+  // Block drag-to-reorder state
+  const [blockDrag, setBlockDrag] = useState<number | null>(null);
+  const [blockDragOver, setBlockDragOver] = useState<number | null>(null);
+  const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null);
+
   // Gallery drag-to-reorder state
   const [galleryDrag, setGalleryDrag] = useState<{ blockId: string; idx: number } | null>(null);
   const [galleryDragOver, setGalleryDragOver] = useState<{ blockId: string; idx: number } | null>(null);
@@ -351,7 +356,19 @@ export default function SingleProjectPage() {
   const addBlock = (type: BlockType) => {
     const initialContent = type === 'gallery' ? { title: '', images: [], height: 300 } : '';
     const newBlock: ContentBlock = { id: Date.now().toString(), type, content: initialContent };
-    setEditingProject(prev => prev ? ({ ...prev, blocks: [...prev.blocks, newBlock] }) : prev);
+    setEditingProject(prev => {
+      if (!prev) return prev;
+      if (focusedBlockId) {
+        const anchorIdx = prev.blocks.findIndex(b => b.id === focusedBlockId);
+        if (anchorIdx !== -1) {
+          const updated = [...prev.blocks];
+          updated.splice(anchorIdx + 1, 0, newBlock);
+          return { ...prev, blocks: updated };
+        }
+      }
+      return { ...prev, blocks: [...prev.blocks, newBlock] };
+    });
+    setFocusedBlockId(newBlock.id);
   };
 
   const updateBlockContent = (blockId: string, newContent: string) => {
@@ -362,8 +379,27 @@ export default function SingleProjectPage() {
   };
 
   const removeBlock = (blockId: string) => {
+    if (focusedBlockId === blockId) setFocusedBlockId(null);
     setEditingProject(prev => prev ? ({ ...prev, blocks: prev.blocks.filter(b => b.id !== blockId) }) : prev);
   };
+
+  const handleBlockDragStart = (e: React.DragEvent, idx: number) => {
+    setBlockDrag(idx);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+  const handleBlockDragEnter = (idx: number) => {
+    if (blockDrag !== null && idx !== blockDrag) setBlockDragOver(idx);
+  };
+  const handleBlockDrop = (targetIdx: number) => {
+    if (blockDrag === null || blockDrag === targetIdx || !editingProject) return;
+    const arr = [...editingProject.blocks];
+    const [moved] = arr.splice(blockDrag, 1);
+    arr.splice(targetIdx, 0, moved);
+    setEditingProject(prev => prev ? ({ ...prev, blocks: arr }) : prev);
+    setBlockDrag(null);
+    setBlockDragOver(null);
+  };
+  const handleBlockDragEnd = () => { setBlockDrag(null); setBlockDragOver(null); };
 
   if (isLoading) {
     return <div className="h-screen flex items-center justify-center text-fuchsia-400 dark:text-fuchsia-500 font-mono tracking-widest animate-pulse">MOUNTING EDITOR SYSTEM...</div>;
@@ -554,9 +590,37 @@ export default function SingleProjectPage() {
           </div>
         )}
 
-        {editingProject.blocks.map((block) => (
-          <div key={block.id} className="relative group p-4 rounded-sm transition-colors pr-12 border bg-white/5 border-sky-300/10 hover:border-fuchsia-400/50 dark:border-white/5">
-            <button onClick={() => removeBlock(block.id)} className="absolute right-3 top-4 p-1.5 text-sky-300/30 hover:bg-red-500/20 hover:text-red-400 rounded-sm transition-all"><Trash2 size={16} /></button>
+        {editingProject.blocks.map((block, idx) => {
+          const isDragging = blockDrag === idx;
+          const isOver = blockDragOver === idx && blockDrag !== idx;
+          return (
+            <div
+              key={block.id}
+              onDragEnter={() => handleBlockDragEnter(idx)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => handleBlockDrop(idx)}
+              className={`relative overflow-visible transition-all duration-100 ${isDragging ? 'opacity-40 scale-[0.99]' : ''}`}
+            >
+              {isOver && blockDrag !== null && blockDrag > idx && (
+                <div className="absolute -top-2 left-0 right-0 h-0.5 bg-fuchsia-400 rounded-full shadow-[0_0_8px_rgba(217,70,239,0.9)] z-10 pointer-events-none" />
+              )}
+              <div
+                className={`relative group p-4 pl-10 rounded-sm transition-all pr-12 border bg-white/5 cursor-pointer ${
+                  focusedBlockId === block.id
+                    ? 'border-fuchsia-500/60 shadow-[0_0_14px_rgba(217,70,239,0.07)]'
+                    : 'border-sky-300/10 hover:border-fuchsia-400/40 dark:border-white/5'
+                }`}
+                onClick={() => setFocusedBlockId(block.id)}
+              >
+                <div
+                  draggable
+                  onDragStart={(e) => handleBlockDragStart(e, idx)}
+                  onDragEnd={handleBlockDragEnd}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 cursor-grab p-1.5 text-sky-300/20 opacity-0 group-hover:opacity-100 hover:text-fuchsia-400 transition-all select-none z-10"
+                >
+                  <GripVertical size={14} />
+                </div>
+                <button onClick={() => removeBlock(block.id)} className="absolute right-3 top-4 p-1.5 text-sky-300/30 hover:bg-red-500/20 hover:text-red-400 rounded-sm transition-all"><Trash2 size={16} /></button>
 
             {block.type === 'heading' && (
               <div className="space-y-2">
@@ -691,8 +755,20 @@ export default function SingleProjectPage() {
                 </div>
               );
             })()}
-          </div>
-        ))}
+              </div>
+              {focusedBlockId === block.id && (
+                <div className="flex items-center gap-2 px-3 py-1.5 pointer-events-none">
+                  <div className="flex-1 border-t border-dashed border-fuchsia-500/25" />
+                  <span className="text-[9px] font-mono text-fuchsia-400/40 tracking-widest shrink-0">↓ NEW BLOCK INSERTS HERE</span>
+                  <div className="flex-1 border-t border-dashed border-fuchsia-500/25" />
+                </div>
+              )}
+              {isOver && blockDrag !== null && blockDrag < idx && (
+                <div className="absolute -bottom-2 left-0 right-0 h-0.5 bg-fuchsia-400 rounded-full shadow-[0_0_8px_rgba(217,70,239,0.9)] z-10 pointer-events-none" />
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* BOTTOM TOOLBAR — add block types */}

@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAppStore } from '@/lib/store/useAppStore';
 import { useThemeStore } from '@/lib/store/useThemeStore';
-import { Users } from 'lucide-react';
 import {
   Hexagon,
   Code2,
@@ -69,16 +68,30 @@ export default function RadarHud() {
   const isSystemBooted = useAppStore((state) => state.isSystemBooted);
   const isSummaryMode = useAppStore((state) => state.isSummaryMode);
   const toggleSummaryMode = useAppStore((state) => state.toggleSummaryMode);
-  const remotePlayers = useAppStore((state) => state.remotePlayers);
   const theme = useThemeStore((s) => s.theme);
   const isLight = theme === 'light';
-
-  const activeExplorerCount = remotePlayers.length + 1; // +1 for self
 
   const pathname = usePathname();
   const router = useRouter();
 
   const [isMenuOpen, setIsMenuOpen] = useState(true);
+
+  const textSlideVariants: Variants = {
+    initial: { 
+      width: 0, 
+      opacity: 0,
+      marginLeft: 0
+    },
+    hover: { 
+      width: "auto", 
+      opacity: 1,
+      marginLeft: 8,
+      transition: {
+        width: { duration: 0.3, ease: "easeOut" },
+        opacity: { duration: 0.2, delay: 0.1 }
+      }
+    }
+  };
 
   if (pathname.startsWith('/admin')) return null;
 
@@ -147,12 +160,21 @@ export default function RadarHud() {
                 {/* SYSTEM OVERVIEW BUTTON */}
                 <motion.button 
                   variants={menuItemVariants}
-                  whileHover={{ scale: 1.05, x: -5 }}
+                  initial="initial"
+                  whileHover="hover" // 🌟 สำคัญมาก: เพื่อส่งต่อสถานะ "hover" ให้กับคอมโพเนนต์ลูกด้านใน
                   onClick={() => router.push('/')}
-                  className="pointer-events-auto flex items-center gap-2 font-mono text-[10px] tracking-widest border px-3 py-2 bg-white/10 dark:bg-black/60 backdrop-blur-sm rounded-sm transition-all text-sky-200 border-sky-300 hover:bg-sky-600 hover:text-white hover:border-sky-500 dark:text-cyan-400 dark:border-cyan-500/40 dark:hover:bg-cyan-500 dark:hover:text-black dark:hover:border-cyan-400 dark:hover:shadow-[0_0_15px_rgba(34,211,238,0.4)]"
+                  // ✂️ เอา gap-2 ออกจากตรงนี้แล้วครับ
+                  className="pointer-events-auto flex items-center font-mono text-[10px] tracking-widest border px-3 py-2 bg-white/10 dark:bg-black/60 backdrop-blur-sm rounded-sm transition-all text-sky-200 border-sky-300 hover:bg-sky-600 hover:text-white hover:border-sky-500 dark:text-cyan-400 dark:border-cyan-500/40 dark:hover:bg-cyan-500 dark:hover:text-black dark:hover:border-cyan-400 dark:hover:shadow-[0_0_15px_rgba(34,211,238,0.4)]"
                 >
-                  <Orbit size={12} className="animate-pulse" />
-                  <span>[ SYSTEM OVERVIEW ]</span>
+                  <Orbit size={12} className="animate-pulse shrink-0" />
+                  
+                  {/* 🌟 เปลี่ยนเป็น motion.span + ใส่ลอจิกสไลด์ */}
+                  <motion.span 
+                    variants={textSlideVariants}
+                    className="overflow-hidden whitespace-nowrap block"
+                  >
+                    [ SYSTEM OVERVIEW ]
+                  </motion.span>
                 </motion.button>
 
                 {/* Navigation Nodes */}
@@ -208,33 +230,9 @@ export default function RadarHud() {
                   }`}
                 >
                   {isSummaryMode ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
-                  <span>{isSummaryMode ? 'CLOSE SLATE' : 'DATA SLATE'}</span>
+                  <span>{isSummaryMode ? 'CLOSE' : 'DATA'}</span>
                 </motion.button>
 
-                {/* Divider */}
-                <motion.div variants={menuItemVariants} className={`w-8 h-[1px] my-1 ${isLight ? 'bg-sky-200' : 'bg-neutral-800'}`} />
-
-                {/* ACTIVE EXPLORERS COUNTER */}
-                <motion.div
-                  variants={menuItemVariants}
-                  className={`flex items-center gap-2.5 px-3 py-1.5 border rounded-sm font-mono text-[10px] tracking-widest select-none ${
-                    isLight
-                      ? 'bg-white/5 border-sky-300/30 text-sky-400/70'
-                      : 'bg-black/40 border-cyan-500/20 text-cyan-500/60'
-                  }`}
-                >
-                  <Users size={11} className={isLight ? 'text-sky-400' : 'text-cyan-400'} />
-                  <span>EXPLORERS</span>
-                  <span className={`ml-auto font-bold text-xs tabular-nums ${isLight ? 'text-sky-300' : 'text-cyan-300'}`}>
-                    [{activeExplorerCount}]
-                  </span>
-                  {/* live pulse dot */}
-                  <span className={`w-1.5 h-1.5 rounded-full animate-pulse shrink-0 ${
-                    activeExplorerCount > 1
-                      ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]'
-                      : (isLight ? 'bg-sky-400/50' : 'bg-cyan-600/50')
-                  }`} />
-                </motion.div>
 
               </motion.div>
             )}

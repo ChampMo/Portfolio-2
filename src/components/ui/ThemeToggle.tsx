@@ -38,7 +38,7 @@ export default function ThemeToggle({
       onClick={toggle}
       aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
       title={isDark ? 'Light mode' : 'Dark mode'}
-      className={`fixed top-4 right-4 z-[300] w-10 h-10 rounded-full flex items-center justify-center border backdrop-blur-md transition-all
+      className={`fixed top-4 right-16 z-300 w-10 h-10 rounded-full flex items-center justify-center border backdrop-blur-md transition-all
         ${isDark
           ? 'bg-black/60 border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/15 hover:border-cyan-300/70 shadow-[0_0_20px_rgba(34,211,238,0.25)]'
           : 'bg-white/70 border-cyan-700/30 text-cyan-700 hover:bg-cyan-100 hover:border-cyan-600/60 shadow-[0_4px_20px_rgba(8,145,178,0.15)]'}

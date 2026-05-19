@@ -6,6 +6,7 @@ import RadarHud from '@/components/ui/RadarHud';
 import SectorHud from '@/components/ui/SectorHud';
 import DataSlate from '@/components/ui/DataSlate';
 import ThemeToggle from '@/components/ui/ThemeToggle';
+import VolumeControl from '@/components/ui/VolumeControl';
 import MobileMenu from '@/components/ui/MobileMenu'; // 🌟 1. นำเข้าโมดูลเมนูโมบายล์ตัวใหม่
 
 const themeNoFlashScript = `
@@ -68,6 +69,7 @@ export default function RootLayout({
           <SectorHud />
           <RadarHud />
           <ThemeToggle />
+          <VolumeControl />
         </div>
 
         {/* หน้าจอมือถือ MOBILE (ต่ำกว่าขนาด md ลงไป): พับเก็บทุกอย่างแล้วรันเมนูแฮมเบอร์เกอร์ */}

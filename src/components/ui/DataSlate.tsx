@@ -541,8 +541,20 @@ export default function DataSlate() {
 
       {/* Cover image */}
       {proj.coverImage && (
-        <div className={`w-full rounded-sm overflow-hidden border ${isLight ? 'border-sky-300/20' : 'border-white/10'}`}>
-          <img src={proj.coverImage} alt={proj.title} className="w-full max-h-72 object-cover opacity-90" />
+        <div className={`relative w-full h-[200px] sm:h-[300px] rounded-sm overflow-hidden border flex items-center justify-center ${
+          isLight ? 'border-sky-300/20 bg-white/5' : 'border-white/10 bg-black/40'
+        }`}>
+          {/* Blurred Background to fill empty space seamlessly */}
+          <div 
+            className="absolute inset-0 bg-cover bg-center opacity-30 blur-xl"
+            style={{ backgroundImage: `url(${proj.coverImage})` }}
+          />
+          {/* Main Image - contained completely within the box */}
+          <img 
+            src={proj.coverImage} 
+            alt={proj.title} 
+            className="relative z-10 max-w-full max-h-full w-auto h-auto object-contain drop-shadow-2xl rounded-lg" 
+          />
         </div>
       )}
 

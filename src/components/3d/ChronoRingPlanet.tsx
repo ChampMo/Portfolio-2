@@ -29,6 +29,7 @@ type ExperienceEntry = {
 interface ChronoRingPlanetProps extends OrbitParams {
   color: string;
   label: string;
+  scale?: number;
 }
 
 const DIAL_RADIUS = 2.0;
@@ -39,6 +40,7 @@ const TAU = Math.PI * 2;
 export default function ChronoRingPlanet({
   color,
   label,
+  scale,
   ...orbit
 }: ChronoRingPlanetProps) {
   const groupRef = useOrbitPosition(orbit);
@@ -168,7 +170,7 @@ export default function ChronoRingPlanet({
   const aligned = entryCount > 0 ? entries[alignedIdx] : null;
 
   return (
-    <group ref={groupRef}>
+    <group ref={groupRef} scale={scale ?? 1}>
       {/* Planet-local glow light */}
       <pointLight position={[0, 0, 0]} intensity={hovered ? 3.5 : 2.0} distance={10} color={color} />
 

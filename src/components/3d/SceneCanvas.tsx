@@ -17,10 +17,10 @@ import { useThemeStore } from '@/lib/store/useThemeStore';
 import { useMultiplayer, type RemotePlayer } from '@/lib/hooks/useMultiplayer';
 
 const CONFIG_PLANETS = {
-  skills: { radiusX: 12, radiusZ: 12, speed: 0.09, offset: 0, centerY: 1.0, color: "#10b981", label: "[ TECH FORGE ]" },
-  services: { radiusX: 17, radiusZ: 17, speed: 0.06, offset: Math.PI / 2, centerY: 0.5, color: "#f59e0b", label: "[ ENERGY HUB ]" },
-  experience: { radiusX: 22, radiusZ: 22, speed: 0.045, offset: Math.PI, centerY: -0.5, color: "#3b82f6", label: "[ CHRONO-RING ]" },
-  projects: { radiusX: 27, radiusZ: 27, speed: 0.03, offset: (3 * Math.PI) / 2, centerY: 1.5, color: "#ec4899", label: "[ CONSTELLATION ]" },
+  skills:     { radiusX: 12, radiusZ: 12, speed: 0.09, offset: 0,                  centerY: 1.0,  color: "#10b981", label: "[ TECH FORGE ]",     scale: 1.8 },
+  services:   { radiusX: 17, radiusZ: 17, speed: 0.06, offset: Math.PI / 2,        centerY: 0.5,  color: "#f59e0b", label: "[ ENERGY HUB ]",     scale: 1.8 },
+  experience: { radiusX: 22, radiusZ: 22, speed: 0.045, offset: Math.PI,           centerY: -0.5, color: "#3b82f6", label: "[ CHRONO-RING ]",    scale: 1.5 },
+  projects:   { radiusX: 27, radiusZ: 27, speed: 0.03,  offset: (3 * Math.PI) / 2, centerY: 1.5,  color: "#ec4899", label: "[ CONSTELLATION ]", scale: 2.0 },
 };
 
 const DESIGN_VIEWPORT_WIDTH = 1600;
@@ -112,6 +112,7 @@ function OrbitalSystem({ planets }: { planets: PlanetCfg[] }) {
               const shared = {
                 radiusX: rx, radiusZ: rz, speed: planet.speed, offset: planet.offset,
                 centerY: planet.centerY, color: planet.color, label: planet.label, path: planet.path,
+                scale: planet.scale,
               };
               switch (planet.path) {
                 case '/skills':     return <TechForgePlanet {...shared} />;

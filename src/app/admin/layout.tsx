@@ -12,6 +12,7 @@ import { ConfirmProvider } from '@/context/ConfirmContext';
 import AdminAuthGate from '@/components/admin/AdminAuthGate';
 import { useThemeStore } from '@/lib/store/useThemeStore';
 import { useVolumeStore } from '@/lib/store/useVolumeStore';
+import { audioManager } from '@/lib/audio/audioManager';
 
 const adminMenu = [
   { name: 'Dashboard', path: '/admin', icon: Hexagon },
@@ -155,7 +156,7 @@ function SidebarNavigation({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: 
           </button>
         )}
 
-        <Link href="/">
+        <Link href="/" onClick={() => audioManager.playBgm('main')}>
           <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-sm transition-all text-xs tracking-widest border
             bg-white/5 border-sky-300/20 text-sky-200/70 hover:bg-red-500/20 hover:text-red-300 hover:border-red-500/40
             dark:bg-white/5 dark:border-transparent dark:text-gray-500 dark:hover:bg-red-500/10 dark:hover:text-red-400"

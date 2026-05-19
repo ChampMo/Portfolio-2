@@ -70,6 +70,7 @@ function toDisplayProject(p: ApiProject): DisplayProject {
 interface ConstellationPlanetProps extends OrbitParams {
   color: string;
   label: string;
+  scale?: number;
 }
 
 // Triangular nebula formation — one local position per project slot (up to 3).
@@ -89,6 +90,7 @@ const ALL_LINKS: Array<[number, number]> = [
 export default function ConstellationPlanet({
   color,
   label,
+  scale,
   ...orbit
 }: ConstellationPlanetProps) {
   const groupRef = useOrbitPosition(orbit);
@@ -175,7 +177,7 @@ export default function ConstellationPlanet({
   };
 
   return (
-    <group ref={groupRef}>
+    <group ref={groupRef} scale={scale ?? 1}>
       {/* Generous hitbox so the cluster stays clickable from far away */}
       <mesh
         visible={false}

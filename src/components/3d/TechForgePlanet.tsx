@@ -31,6 +31,7 @@ type SkillCategory = {
 interface TechForgePlanetProps extends OrbitParams {
   color: string;
   label: string;
+  scale?: number;
 }
 
 // One orthogonal-ish orientation per skill category (aligned to the 4 DB skill groups).
@@ -58,6 +59,7 @@ function toCategories(matrix: SkillMatrix): SkillCategory[] {
 export default function TechForgePlanet({
   color,
   label,
+  scale,
   ...orbit
 }: TechForgePlanetProps) {
   const groupRef = useOrbitPosition(orbit);
@@ -116,7 +118,7 @@ export default function TechForgePlanet({
   };
 
   return (
-    <group ref={groupRef}>
+    <group ref={groupRef} scale={scale ?? 1}>
       {/* Generous invisible hitbox so the planet stays clickable from far away */}
       <mesh
         onClick={handleClick}

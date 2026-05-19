@@ -38,6 +38,7 @@ const SERVICE_HUES = ['#22d3ee', '#a78bfa', '#10b981', '#fb7185'];
 interface EnergyHubPlanetProps extends OrbitParams {
   color: string;
   label: string;
+  scale?: number;
 }
 
 const PLANET_RADIUS = 1.2;
@@ -45,6 +46,7 @@ const PLANET_RADIUS = 1.2;
 export default function EnergyHubPlanet({
   color,
   label,
+  scale,
   ...orbit
 }: EnergyHubPlanetProps) {
   const groupRef = useOrbitPosition(orbit);
@@ -109,7 +111,7 @@ export default function EnergyHubPlanet({
   };
 
   return (
-    <group ref={groupRef}>
+    <group ref={groupRef} scale={scale ?? 1}>
       {/* Generous hitbox so the planet remains clickable at overview distance */}
       <mesh
         visible={false}

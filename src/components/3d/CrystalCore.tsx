@@ -44,16 +44,16 @@ export default function CrystalCore() {
     // Animate glow opacity directly on material — no state re-render
     if (glowInnerRef.current) {
       (glowInnerRef.current.material as THREE.MeshBasicMaterial).opacity =
-        (hovered ? 0.85 : 0.65) + Math.sin(t * 1.5) * 0.08;
+        (hovered ? 1.4 : 0.7) + Math.sin(t * 1.5) * 0.08;
     }
     if (glowOuterRef.current) {
       (glowOuterRef.current.material as THREE.MeshBasicMaterial).opacity =
-        (hovered ? 0.45 : 0.3) + Math.sin(t * 0.8 + 1.2) * 0.05;
+        (hovered ? 0.6 : 0.4) + Math.sin(t * 0.8 + 1.2) * 0.05;
     }
     // 🌟 [ADDED]: อนิเมชันการเต้นของแสงชั้นที่ 3 (จางสุด เต้นช้าสุด)
     if (glowHaloRef.current) {
       (glowHaloRef.current.material as THREE.MeshBasicMaterial).opacity =
-        (hovered ? 0.1 : 0.05) + Math.sin(t * 1 + 2.4) * 0.05;
+        (hovered ? 0.2 : 0.15) + Math.sin(t * 1 + 2.4) * 0.05;
     }
   });
 
@@ -125,14 +125,14 @@ export default function CrystalCore() {
     <Float speed={1.5} rotationIntensity={0.2} floatIntensity={1.5}>
 
       {/* Lights */}
-      <pointLight ref={lightRef} position={[0, 0, 0]} intensity={14} distance={14} color="#c084fc" />
+      <pointLight ref={lightRef} position={[0, 0, 0]} intensity={14} distance={20} color="#c084fc" />
       <pointLight position={[0, 0, 2]} intensity={4} distance={8} color="#818cf8" />
       <pointLight position={[0, 2, -1]} intensity={3} distance={7} color="#f0abfc" />
 
       {glowTexture && (
         <>
           <Billboard follow={true} lockX={false} lockY={false} lockZ={false}>
-            <mesh ref={glowInnerRef} scale={6}>
+            <mesh ref={glowInnerRef} scale={9}>
               <planeGeometry args={[1, 1]} />
               <meshBasicMaterial
                 map={glowTexture}
@@ -145,7 +145,7 @@ export default function CrystalCore() {
           </Billboard>
 
           <Billboard follow={true} lockX={false} lockY={false} lockZ={false}>
-            <mesh ref={glowOuterRef} scale={11}>
+            <mesh ref={glowOuterRef} scale={16}>
               <planeGeometry args={[1, 1]} />
               <meshBasicMaterial
                 map={glowTexture}
@@ -159,7 +159,7 @@ export default function CrystalCore() {
 
           {/* 🌟 [ADDED]: ชั้นที่ 3 ออร่าวงนอกสุด ปรับสเกลใหญ่เป็น 18 และเริ่มความสว่างที่ 0.12 */}
           <Billboard follow={true} lockX={false} lockY={false} lockZ={false}>
-            <mesh ref={glowHaloRef} scale={18}>
+            <mesh ref={glowHaloRef} scale={26}>
               <planeGeometry args={[1, 1]} />
               <meshBasicMaterial
                 map={glowTexture}
@@ -181,7 +181,7 @@ export default function CrystalCore() {
           onPointerOut={handlePointerOut}
           onClick={handleClick}
         >
-          <icosahedronGeometry args={[2.0, 0]} />
+          <icosahedronGeometry args={[4, 0]} />
           <MeshTransmissionMaterial
             backside
             backsideThickness={1}
@@ -200,7 +200,7 @@ export default function CrystalCore() {
 
       {/* Profile picture */}
       <Billboard follow={true} lockX={false} lockY={false} lockZ={false} position={[0, 0, 0.4]}>
-        <mesh scale={hovered ? 2 : 1.8} renderOrder={5}>
+        <mesh scale={hovered ? 4.2 : 3.9} renderOrder={5}>
           <planeGeometry args={[1, 1]} />
           {myPicture ? (
             <meshBasicMaterial

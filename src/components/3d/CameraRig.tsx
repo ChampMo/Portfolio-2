@@ -18,7 +18,7 @@ const warpCoordinates: Record<string, { pos: [number, number, number]; lookAt: [
   '/':         { pos: [0, 20, 50], lookAt: [0, 0, 0] },
   '/overview': { pos: [0, 20, 50], lookAt: [0, 0, 0] },
 
-  '/about':    { pos: [0, 1, 10],  lookAt: [0, 0, 0] },
+  '/about':    { pos: [0, 3, 17],  lookAt: [0, 0, 0] },
 };
 
 // 🪐 Planet routes are handled dynamically (their target moves each frame).
@@ -34,7 +34,7 @@ function getPlanetRoute(path: string): string | null {
 }
 
 // Camera offset when zoomed onto a planet — bumped for cinematic framing
-const PLANET_CAM_DIST = 11.0; // outward radial distance from the planet
+const PLANET_CAM_DIST = 18.0; // outward radial distance from the planet
 const PLANET_CAM_LIFT = 4.0;  // vertical lift above the planet
 
 // 🔍 Wheel-zoom configuration
@@ -48,6 +48,7 @@ export default function CameraRig() {
   const { camera } = useThree();
   const pathname = usePathname();
   const isSystemBooted = useAppStore((state) => state.isSystemBooted);
+  const isSummaryMode  = useAppStore((state) => state.isSummaryMode);
 
   const lookAtTarget = useRef(new THREE.Vector3(0, 0, 0));
   const desiredPos = useRef(new THREE.Vector3());
@@ -59,9 +60,11 @@ export default function CameraRig() {
   const lastPinchDist    = useRef<number | null>(null);
   const lastMoveSoundAt  = useRef(0);          // throttle: ms timestamp of last move sfx
   const prevPathnameRef  = useRef<string | null>(null); // detect real navigation vs boot
-  // Pathname mirror so event listeners read the current value without re-binding.
-  const pathnameRef = useRef(pathname);
+  // Mirrors so event listeners read the current value without re-binding.
+  const pathnameRef      = useRef(pathname);
+  const summaryModeRef   = useRef(isSummaryMode);
   useEffect(() => { pathnameRef.current = pathname; }, [pathname]);
+  useEffect(() => { summaryModeRef.current = isSummaryMode; }, [isSummaryMode]);
 
   // GSAP warp helper for STATIC routes — applies zoomOffset along the away-vector
   const applyStaticWarp = useCallback((duration = 1.2) => {
@@ -115,14 +118,15 @@ export default function CameraRig() {
   useEffect(() => {
     if (!isSystemBooted) return;
     const onWheel = (e: WheelEvent) => {
+      if (summaryModeRef.current || pathnameRef.current.startsWith('/admin')) return;
       zoomOffset.current = THREE.MathUtils.clamp(
         zoomOffset.current + e.deltaY * ZOOM_SENSITIVITY,
         ZOOM_MIN,
         ZOOM_MAX,
       );
-      // Throttled move sfx (once per 280ms while scrolling)
+      // Throttled move sfx (once per 500ms while scrolling)
       const now = performance.now();
-      if (now - lastMoveSoundAt.current > 280) {
+      if (now - lastMoveSoundAt.current > 2000) {
         audioManager.playSfx('move', 0.2);
         lastMoveSoundAt.current = now;
       }
@@ -151,6 +155,7 @@ export default function CameraRig() {
 
     const onTouchMove = (e: TouchEvent) => {
       if (e.touches.length !== 2 || lastPinchDist.current === null) return;
+      if (summaryModeRef.current || pathnameRef.current.startsWith('/admin')) return;
       const dist = getPinchDist(e);
       // lastPinchDist - dist: positive when fingers close (pinch in = zoom out)
       const delta = lastPinchDist.current - dist;
@@ -162,7 +167,7 @@ export default function CameraRig() {
       lastPinchDist.current = dist;
       // Throttled move sfx during pinch
       const now = performance.now();
-      if (now - lastMoveSoundAt.current > 280) {
+      if (now - lastMoveSoundAt.current > 2000) {
         audioManager.playSfx('move', 0.2);
         lastMoveSoundAt.current = now;
       }

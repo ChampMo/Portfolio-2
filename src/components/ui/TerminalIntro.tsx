@@ -223,7 +223,7 @@ export default function TerminalIntro({ onLaunch }: TerminalIntroProps) {
         )}
       </AnimatePresence>
 
-      <div className="relative z-10 w-full max-w-2xl px-6 space-y-2">
+      <div className="relative z-10 w-full max-w-2xl px-3 sm:px-6 space-y-2 overflow-hidden">
         {/* Boot sequence lines */}
         {lines.map((line, i) => (
           <motion.div
@@ -236,7 +236,7 @@ export default function TerminalIntro({ onLaunch }: TerminalIntroProps) {
               filter: 'blur(6px)',
               transition: { duration: 0.45, ease: [0.36, 0, 0.66, -0.56] },
             }}
-            className="text-sm md:text-base tracking-widest drop-shadow-[0_0_8px_rgba(0,255,0,0.8)]"
+            className="text-[10px] sm:text-sm md:text-base tracking-wide sm:tracking-widest wrap-break-word drop-shadow-[0_0_8px_rgba(0,255,0,0.8)]"
           >
             {line}
           </motion.div>
@@ -254,11 +254,11 @@ export default function TerminalIntro({ onLaunch }: TerminalIntroProps) {
               className="mt-8 space-y-4"
             >
               {/* Prompt line */}
-              <div className="text-sm md:text-base tracking-widest text-green-400 drop-shadow-[0_0_8px_rgba(0,255,0,0.8)]">
+              <div className="text-[10px] sm:text-sm md:text-base tracking-wide sm:tracking-widest text-green-400 wrap-break-word drop-shadow-[0_0_8px_rgba(0,255,0,0.8)]">
                 {`> OPERATOR CALLSIGN REQUIRED FOR REGISTRY ENTRY...`}
               </div>
 
-              <div className="flex items-stretch gap-2">
+              <div className="flex flex-wrap items-stretch gap-2">
                 {/* Prefix label */}
                 <span className="flex items-center text-green-600 tracking-widest text-sm select-none pr-1">
                   CALLSIGN:
@@ -273,7 +273,7 @@ export default function TerminalIntro({ onLaunch }: TerminalIntroProps) {
                   onKeyDown={handleCallsignKeyDown}
                   maxLength={14}
                   placeholder={callsign}
-                  className="flex-1 bg-transparent border border-green-500/50 px-3 py-2 text-green-300 text-sm tracking-[0.2em] placeholder:text-green-800 outline-none focus:border-green-400 focus:shadow-[0_0_12px_rgba(0,255,0,0.3)] transition-all caret-green-400"
+                  className="flex-1 min-w-0 bg-transparent border border-green-500/50 px-3 py-2 text-green-300 text-sm tracking-[0.2em] placeholder:text-green-800 outline-none focus:border-green-400 focus:shadow-[0_0_12px_rgba(0,255,0,0.3)] transition-all caret-green-400"
                   spellCheck={false}
                   autoComplete="off"
                 />
@@ -289,9 +289,9 @@ export default function TerminalIntro({ onLaunch }: TerminalIntroProps) {
 
               {/* Error or hint */}
               {callsignError ? (
-                <p className="text-red-500 text-xs tracking-wider">{`> ERROR: ${callsignError}`}</p>
+                <p className="text-red-500 text-[10px] sm:text-xs tracking-wide wrap-break-word">{`> ERROR: ${callsignError}`}</p>
               ) : (
-                <p className="text-green-800 text-xs tracking-wider">
+                <p className="text-green-800 text-[10px] sm:text-xs tracking-wide wrap-break-word">
                   {`> LEAVE BLANK TO USE AUTO-GENERATED CALLSIGN [${callsign}]`}
                 </p>
               )}
@@ -310,10 +310,10 @@ export default function TerminalIntro({ onLaunch }: TerminalIntroProps) {
               className="mt-6 space-y-3"
             >
               {/* Confirmed callsign echo */}
-              <div className="text-sm tracking-widest text-green-400 drop-shadow-[0_0_8px_rgba(0,255,0,0.6)]">
+              <div className="text-[10px] sm:text-sm tracking-wide sm:tracking-widest text-green-400 wrap-break-word drop-shadow-[0_0_8px_rgba(0,255,0,0.6)]">
                 {`> CALLSIGN CONFIRMED: [${callsign}]`}
               </div>
-              <div className="text-sm tracking-widest text-green-600">
+              <div className="text-[10px] sm:text-sm tracking-wide sm:tracking-widest text-green-600">
                 {`> MULTIPLAYER REGISTRY: ONLINE`}
               </div>
 
@@ -333,7 +333,7 @@ export default function TerminalIntro({ onLaunch }: TerminalIntroProps) {
                 <button
                   onClick={() => { playClick(); handleLaunch(); }}
                   disabled={isLaunching || !assetsReady}
-                  className="group relative px-8 py-3 border border-green-500 bg-transparent text-green-500 font-bold tracking-widest uppercase transition-all duration-300 hover:bg-green-500 hover:text-black hover:shadow-[0_0_20px_rgba(0,255,0,0.6)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-green-500 disabled:hover:shadow-none"
+                  className="group relative w-full sm:w-auto px-4 sm:px-8 py-2.5 sm:py-3 border border-green-500 bg-transparent text-green-500 font-bold text-xs sm:text-sm tracking-wider sm:tracking-widest uppercase transition-all duration-300 hover:bg-green-500 hover:text-black hover:shadow-[0_0_20px_rgba(0,255,0,0.6)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-green-500 disabled:hover:shadow-none"
                 >
                   <span className="relative z-10">
                     {isLaunching ? '[ DECRYPTING CORE... ]' : !assetsReady ? '[ LOADING... ]' : '[ INITIALIZE SYSTEM ]'}

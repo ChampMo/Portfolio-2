@@ -187,7 +187,7 @@ export default function SkillsAdmin() {
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-20">
       {/* STICKY TOPBAR */}
-      <div className="sticky top-0 z-30 backdrop-blur-md -mx-6 md:-mx-10 px-6 md:px-10 pt-4 pb-4 border-b flex items-center justify-between bg-[#001320]/90 border-sky-400/30 dark:bg-gray-950/90 dark:border-emerald-500/30">
+      <div className="sticky top-0 z-50 will-change-transform backdrop-blur-md -mx-6 md:-mx-10 px-6 md:px-10 pt-4 pb-4 border-b flex items-center justify-between bg-[#001320]/90 border-sky-400/30 dark:bg-gray-950/90 dark:border-emerald-500/30">
         <div>
           <h1 className="text-2xl font-serif text-sky-100 dark:text-white">Tech Forge Configuration</h1>
           <p className="text-[10px] text-emerald-400 tracking-widest mt-0.5">[ MANAGE SKILLS & ARSENAL ]</p>

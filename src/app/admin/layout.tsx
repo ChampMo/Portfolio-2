@@ -217,7 +217,7 @@ function AdminMain({ children }: { children: React.ReactNode }) {
           </button>
         </div>
       )}
-      <main className="flex-1 p-6 md:p-10 overflow-y-auto custom-scrollbar relative">
+      <main className="flex-1 px-6 md:px-10 pb-6 md:pb-10 pt-4 overflow-y-auto custom-scrollbar relative">
         {children}
       </main>
     </div>

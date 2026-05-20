@@ -40,9 +40,10 @@ const PLANET_CAM_LIFT = 4.0;  // vertical lift above the planet
 // 🔍 Wheel-zoom configuration
 const ZOOM_MIN = -10;
 const ZOOM_MAX = 15;
-const ZOOM_SENSITIVITY  = 0.012;    // wheel deltaY × sensitivity per tick
-const PINCH_SENSITIVITY = 0.055;    // pinch pixel-delta × sensitivity per frame
-const MIN_PLANET_DIST   = 3.0;      // never let the camera punch through a planet
+const ZOOM_SENSITIVITY       = 0.012;  // wheel deltaY × sensitivity per tick
+const PINCH_SENSITIVITY      = 0.055;  // pinch pixel-delta × sensitivity per frame
+const TOUCH_DRAG_SENSITIVITY = 0.04;   // single-finger drag pixel-delta × sensitivity
+const MIN_PLANET_DIST        = 3.0;    // never let the camera punch through a planet
 
 export default function CameraRig() {
   const { camera } = useThree();
@@ -56,9 +57,10 @@ export default function CameraRig() {
   const radial = useRef(new THREE.Vector3());
 
   // 🔍 Mutable scroll-wheel zoom accumulator (clamped). Positive = zoomed out.
-  const zoomOffset       = useRef(0);
-  const lastPinchDist    = useRef<number | null>(null);
-  const lastMoveSoundAt  = useRef(0);          // throttle: ms timestamp of last move sfx
+  const zoomOffset         = useRef(0);
+  const lastPinchDist      = useRef<number | null>(null);
+  const lastSingleTouchY   = useRef<number | null>(null);
+  const lastMoveSoundAt    = useRef(0);        // throttle: ms timestamp of last move sfx
   const prevPathnameRef  = useRef<string | null>(null); // detect real navigation vs boot
   // Mirrors so event listeners read the current value without re-binding.
   const pathnameRef      = useRef(pathname);
@@ -140,7 +142,7 @@ export default function CameraRig() {
     return () => window.removeEventListener('wheel', onWheel);
   }, [isSystemBooted, applyStaticWarp]);
 
-  // 👌 Pinch-to-zoom — two fingers spread/pinch → same zoomOffset as wheel
+  // 👌 Touch zoom — two-finger pinch OR single-finger drag up/down → same zoomOffset as wheel
   useEffect(() => {
     if (!isSystemBooted) return;
 
@@ -150,22 +152,40 @@ export default function CameraRig() {
     };
 
     const onTouchStart = (e: TouchEvent) => {
-      if (e.touches.length === 2) lastPinchDist.current = getPinchDist(e);
+      if (e.touches.length === 2) {
+        lastPinchDist.current = getPinchDist(e);
+        lastSingleTouchY.current = null; // cancel single-drag when 2nd finger added
+      } else if (e.touches.length === 1) {
+        lastSingleTouchY.current = e.touches[0].clientY;
+      }
     };
 
     const onTouchMove = (e: TouchEvent) => {
-      if (e.touches.length !== 2 || lastPinchDist.current === null) return;
       if (summaryModeRef.current || pathnameRef.current.startsWith('/admin')) return;
-      const dist = getPinchDist(e);
-      // lastPinchDist - dist: positive when fingers close (pinch in = zoom out)
-      const delta = lastPinchDist.current - dist;
-      zoomOffset.current = THREE.MathUtils.clamp(
-        zoomOffset.current + delta * PINCH_SENSITIVITY,
-        ZOOM_MIN,
-        ZOOM_MAX,
-      );
-      lastPinchDist.current = dist;
-      // Throttled move sfx during pinch
+
+      if (e.touches.length === 2 && lastPinchDist.current !== null) {
+        // Two-finger pinch
+        const dist = getPinchDist(e);
+        const delta = lastPinchDist.current - dist; // positive = pinch in = zoom out
+        zoomOffset.current = THREE.MathUtils.clamp(
+          zoomOffset.current + delta * PINCH_SENSITIVITY,
+          ZOOM_MIN, ZOOM_MAX,
+        );
+        lastPinchDist.current = dist;
+      } else if (e.touches.length === 1 && lastSingleTouchY.current !== null) {
+        // Single-finger drag — up = zoom in, down = zoom out (matches scroll wheel feel)
+        const currentY = e.touches[0].clientY;
+        const delta = currentY - lastSingleTouchY.current; // positive = dragging down = zoom out
+        zoomOffset.current = THREE.MathUtils.clamp(
+          zoomOffset.current + delta * TOUCH_DRAG_SENSITIVITY,
+          ZOOM_MIN, ZOOM_MAX,
+        );
+        lastSingleTouchY.current = currentY;
+      } else {
+        return;
+      }
+
+      // Throttled move sfx
       const now = performance.now();
       if (now - lastMoveSoundAt.current > 2000) {
         audioManager.playSfx('move', 0.2);
@@ -174,7 +194,10 @@ export default function CameraRig() {
       if (!getPlanetRoute(pathnameRef.current)) applyStaticWarp(0.45);
     };
 
-    const onTouchEnd = () => { lastPinchDist.current = null; };
+    const onTouchEnd = () => {
+      lastPinchDist.current = null;
+      lastSingleTouchY.current = null;
+    };
 
     window.addEventListener('touchstart',  onTouchStart,  { passive: true });
     window.addEventListener('touchmove',   onTouchMove,   { passive: true });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAppStore } from '@/lib/store/useAppStore';
@@ -51,6 +51,23 @@ export default function DataSlate() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [copied, setCopied] = useState(false);
 
+  // Lightbox & shared-element state
+  const [lightboxImages, setLightboxImages] = useState<string[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [selectedCard, setSelectedCard] = useState<'photo' | 'bio' | 'contact' | 'education' | null>(null);
+  const [selectedProjCover, setSelectedProjCover] = useState<{ src: string; id: string } | null>(null);
+  const lightboxDirectionRef = useRef<number>(1);
+  const openLightbox = (images: string[], index = 0) => {
+    lightboxDirectionRef.current = 1;
+    setLightboxImages(images);
+    setLightboxIndex(index);
+  };
+  const closeLightbox = () => setLightboxImages([]);
+  const navigateLightbox = (dir: -1 | 1, total: number) => {
+    lightboxDirectionRef.current = dir;
+    setLightboxIndex((p) => (p + dir + total) % total);
+  };
+
   const handleShare = async (proj: any) => {
     const url = `${window.location.origin}/projects/${proj._id}`;
     if (navigator.share) {
@@ -93,12 +110,15 @@ export default function DataSlate() {
   }, [pathname, setFocusedProjectId]);
 
   const handleClose = () => {
+    setLightboxImages([]);
+    setSelectedCard(null);
+    setSelectedProjCover(null);
     if (pathname !== '/') {
       setSummaryMode(false);
     } else {
       toggleSummaryMode();
     }
-  }; 
+  };
 
   useEffect(() => {
     if (!isSummaryMode) return;
@@ -180,6 +200,28 @@ export default function DataSlate() {
     return () => clearInterval(intervalId);
   }, [isSummaryMode, pathname, slideshowSrc.length]);
 
+  // ── Profile data at component scope so expanded overlays can read it ──
+  const { personalInfo, media, education, socialLinks } = aboutmeData;
+  const fullName = [personalInfo.firstName, personalInfo.lastName].filter(Boolean).join(' ') || 'Monthol Sukjinda';
+  const socialItems = [
+    { key: 'github',    url: socialLinks.github,    icon: 'mdi:github'    },
+    { key: 'linkedin',  url: socialLinks.linkedin,  icon: 'mdi:linkedin'  },
+    { key: 'instagram', url: socialLinks.instagram, icon: 'mdi:instagram' },
+    { key: 'facebook',  url: socialLinks.facebook,  icon: 'mdi:facebook'  },
+  ].filter(s => s.url);
+  const contactItems = [
+    { label: 'EMAIL',    val: personalInfo.email,   icon: <Mail size={11} />   },
+    { label: 'PHONE',    val: personalInfo.phone,   icon: <Phone size={11} />  },
+    { label: 'LOCATION', val: personalInfo.address, icon: <MapPin size={11} /> },
+  ].filter(c => c.val);
+  const eduLine = [education.timelineStart, education.timelineEnd].filter(Boolean).join(' – ')
+    + (education.gpax ? ` · GPAX ${education.gpax}` : '');
+
+  const cornerBrackets = (size: string, color: string) =>
+    (['top-0 left-0 border-t-2 border-l-2', 'top-0 right-0 border-t-2 border-r-2',
+      'bottom-0 left-0 border-b-2 border-l-2', 'bottom-0 right-0 border-b-2 border-r-2'] as const
+    ).map((pos, i) => <div key={i} className={`absolute z-10 ${size} ${pos} ${color}`} />);
+
   // ========================================================
   // 🛠️ RENDER 1: PROFILE (single-page layout)
   // ========================================================
@@ -188,25 +230,6 @@ export default function DataSlate() {
     const totalProjects = projects.length || 0;
     const totalServices = servicesData?.services?.length || 0;
     const totalExperiences = experienceData?.experiences?.length || 0;
-
-    const { personalInfo, media, education, socialLinks } = aboutmeData;
-    const fullName = [personalInfo.firstName, personalInfo.lastName].filter(Boolean).join(' ') || 'Monthol Sukjinda';
-
-    const socialItems = [
-      { key: 'github',    url: socialLinks.github,    icon: 'mdi:github'    },
-      { key: 'linkedin',  url: socialLinks.linkedin,  icon: 'mdi:linkedin'  },
-      { key: 'instagram', url: socialLinks.instagram, icon: 'mdi:instagram' },
-      { key: 'facebook',  url: socialLinks.facebook,  icon: 'mdi:facebook'  },
-    ].filter(s => s.url);
-
-    const contactItems = [
-      { label: 'EMAIL',    val: personalInfo.email,   icon: <Mail size={11} />   },
-      { label: 'PHONE',    val: personalInfo.phone,   icon: <Phone size={11} />  },
-      { label: 'LOCATION', val: personalInfo.address, icon: <MapPin size={11} /> },
-    ].filter(c => c.val);
-
-    const eduLine = [education.timelineStart, education.timelineEnd].filter(Boolean).join(' – ')
-      + (education.gpax ? ` · GPAX ${education.gpax}` : '');
 
     const stats = [
       { label: 'PROJECTS',    val: totalProjects,    icon: FolderGit2, clr: isLight ? 'text-fuchsia-400' : 'text-rose-400',   border: isLight ? 'border-fuchsia-400/20' : 'border-rose-500/20'   },
@@ -226,17 +249,18 @@ export default function DataSlate() {
         <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-6">
 
           {/* LEFT COL: photo · social · CV */}
-          <div className="flex flex-col gap-3">
-            {/* Photo frame */}
-            <div className={`relative w-full aspect-[3/4] rounded-sm overflow-hidden group border ${
-              isLight ? 'bg-white/5 border-sky-300/30' : 'bg-black/60 border-cyan-500/20'
-            }`}>
-              {/* corner brackets */}
-              {(['top-0 left-0 border-t-2 border-l-2', 'top-0 right-0 border-t-2 border-r-2',
-                 'bottom-0 left-0 border-b-2 border-l-2', 'bottom-0 right-0 border-b-2 border-r-2'] as const
-              ).map((pos, i) => (
-                <div key={i} className={`absolute w-4 h-4 z-10 ${pos} ${isLight ? 'border-sky-400' : 'border-cyan-400'}`} />
-              ))}
+          <div className="flex flex-col gap-3 items-center lg:items-stretch">
+            {/* Photo frame — layoutId source */}
+            <motion.div
+              layoutId="hud-photo"
+              transition={{ type: 'spring', stiffness: 340, damping: 30 }}
+              className={`relative w-full max-w-[190px] sm:max-w-none aspect-[3/4] rounded-sm overflow-hidden group border cursor-pointer ${
+                isLight ? 'bg-white/5 border-sky-300/30' : 'bg-black/60 border-cyan-500/20'
+              }`}
+              style={{ opacity: selectedCard === 'photo' ? 0 : 1, pointerEvents: selectedCard === 'photo' ? 'none' : 'auto' }}
+              onClick={() => setSelectedCard('photo')}
+            >
+              {cornerBrackets('w-4 h-4', isLight ? 'border-sky-400' : 'border-cyan-400')}
               <AnimatePresence mode="popLayout">
                 <motion.img
                   key={currentImageIndex}
@@ -281,8 +305,7 @@ export default function DataSlate() {
                 }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
-              {/* scanning line */}
-            </div>
+            </motion.div>
 
             {/* Social icons */}
             {socialItems.length > 0 && (
@@ -348,39 +371,56 @@ export default function DataSlate() {
               </div>
             </div>
 
-            {/* Bio */}
+            {/* Bio — layoutId source */}
             {personalInfo.description && (
-              <div className={`p-4 rounded-sm border ${
-                isLight ? 'bg-white/5 border-sky-300/20' : 'bg-cyan-950/10 border-cyan-500/15'
-              }`}>
-                <p className={`text-sm leading-relaxed ${isLight ? 'text-sky-100/90' : 'text-gray-300'}`}>
+              <motion.div
+                layoutId="hud-bio"
+                transition={{ type: 'spring', stiffness: 340, damping: 30 }}
+                className={`p-4 rounded-sm border cursor-pointer hover:opacity-80 transition-opacity ${
+                  isLight ? 'bg-white/5 border-sky-300/20' : 'bg-cyan-950/10 border-cyan-500/15'
+                }`}
+                style={{ opacity: selectedCard === 'bio' ? 0 : undefined, pointerEvents: selectedCard === 'bio' ? 'none' : 'auto' }}
+                onClick={() => setSelectedCard('bio')}
+              >
+                <p className={`text-xs font-mono tracking-widest mb-2 ${isLight ? 'text-sky-400/50' : 'text-gray-600'}`}>[ BIOGRAPHY ]</p>
+                <p className={`text-sm leading-relaxed line-clamp-3 ${isLight ? 'text-sky-100/90' : 'text-gray-300'}`}>
                   {personalInfo.description}
                 </p>
-              </div>
+              </motion.div>
             )}
 
-            {/* Contact grid */}
+            {/* Contact grid — layoutId source */}
             {contactItems.length > 0 && (
-              <div className={`grid gap-px border rounded-sm overflow-hidden ${
-                isLight ? 'border-sky-300/20 bg-sky-300/10' : 'border-white/8 bg-white/8'
-              }`}>
+              <motion.div
+                layoutId="hud-contact"
+                transition={{ type: 'spring', stiffness: 340, damping: 30 }}
+                className={`grid gap-px border rounded-sm overflow-hidden cursor-pointer hover:opacity-80 transition-opacity ${
+                  isLight ? 'border-sky-300/20 bg-sky-300/10' : 'border-white/8 bg-white/8'
+                }`}
+                style={{ opacity: selectedCard === 'contact' ? 0 : undefined, pointerEvents: selectedCard === 'contact' ? 'none' : 'auto' }}
+                onClick={() => setSelectedCard('contact')}
+              >
                 {contactItems.map((c, idx) => (
-                  <div key={idx} className={`flex items-center gap-3 px-4 py-2.5 ${
-                    isLight ? 'bg-white/5' : 'bg-black/30'
-                  }`}>
+                  <div key={idx} className={`flex items-center gap-3 px-4 py-2.5 ${isLight ? 'bg-white/5' : 'bg-black/30'}`}>
                     <span className={`shrink-0 ${isLight ? 'text-sky-400/60' : 'text-gray-500'}`}>{c.icon}</span>
                     <span className={`text-xs font-mono tracking-widest w-16 shrink-0 ${isLight ? 'text-sky-400/60' : 'text-gray-500'}`}>{c.label}</span>
-                    <span className={`text-xs text-white/80 truncate ${isLight ? '' : ''}`}>{c.val}</span>
+                    <span className="text-xs text-white/80 truncate">{c.val}</span>
                   </div>
                 ))}
-              </div>
+              </motion.div>
             )}
 
-            {/* Education */}
+            {/* Education — layoutId source */}
             {(education.universityName || education.major) && (
-              <div className={`flex items-center gap-4 p-4 rounded-sm border ${
-                isLight ? 'bg-white/5 border-sky-300/20' : 'bg-white/3 border-white/8'
-              }`}>
+              <motion.div
+                layoutId="hud-education"
+                transition={{ type: 'spring', stiffness: 340, damping: 30 }}
+                className={`flex items-center gap-4 p-4 rounded-sm border cursor-pointer hover:opacity-80 transition-opacity ${
+                  isLight ? 'bg-white/5 border-sky-300/20' : 'bg-white/3 border-white/8'
+                }`}
+                style={{ opacity: selectedCard === 'education' ? 0 : undefined, pointerEvents: selectedCard === 'education' ? 'none' : 'auto' }}
+                onClick={() => setSelectedCard('education')}
+              >
                 {education.universityLogo && (
                   <img src={education.universityLogo} alt="University" className="w-11 h-11 object-contain shrink-0 opacity-80" />
                 )}
@@ -398,7 +438,7 @@ export default function DataSlate() {
                     <p className={`text-xs font-mono mt-0.5 ${isLight ? 'text-sky-200/50' : 'text-gray-600'}`}>{eduLine}</p>
                   )}
                 </div>
-              </div>
+              </motion.div>
             )}
           </div>
         </div>
@@ -533,7 +573,9 @@ export default function DataSlate() {
   // ========================================================
   // 🛠️ RENDER 5a: PROJECT DETAIL
   // ========================================================
-  const renderProjectDetail = (proj: any) => (
+  const renderProjectDetail = (proj: any) => {
+
+    return (
     <div className="space-y-6">
       {/* Back button + Share button */}
       <div className="flex items-center justify-between">
@@ -563,25 +605,26 @@ export default function DataSlate() {
         </button>
       </div>
 
-      {/* Cover image */}
+      {/* Cover image — layoutId source */}
       {proj.coverImage && (
-        <div className={`relative w-full h-32.5 sm:h-55 md:h-75 rounded-sm overflow-hidden border flex items-center justify-center ${
-          isLight ? 'border-sky-300/20 bg-white/5' : 'border-white/10 bg-black/40'
-        }`}>
-          {/* Blurred Background to fill empty space seamlessly */}
-          <div
-            className="absolute inset-0 bg-cover bg-center opacity-30 blur-xl"
-            style={{ backgroundImage: `url(${proj.coverImage})` }}
-          />
-          {/* Main Image - contained completely within the box */}
+        <motion.div
+          layoutId={`proj-cover-${String(proj._id)}`}
+          transition={{ type: 'spring', stiffness: 340, damping: 30 }}
+          className={`relative w-full h-32.5 sm:h-55 md:h-75 rounded-sm overflow-hidden border flex items-center justify-center cursor-zoom-in ${
+            isLight ? 'border-sky-300/20 bg-white/5' : 'border-white/10 bg-black/40'
+          }`}
+          style={{ opacity: selectedProjCover?.id === String(proj._id) ? 0 : 1 }}
+          onClick={() => setSelectedProjCover({ src: proj.coverImage, id: String(proj._id) })}
+        >
+          <div className="absolute inset-0 bg-cover bg-center opacity-30 blur-xl" style={{ backgroundImage: `url(${proj.coverImage})` }} />
           <img
             src={proj.coverImage}
             alt={proj.title}
             loading="eager"
             fetchPriority="high"
-            className="relative z-10 max-w-full max-h-full w-auto h-auto object-contain drop-shadow-2xl rounded-lg"
+            className="relative z-10 max-w-full max-h-full w-auto h-auto object-contain drop-shadow-2xl rounded-lg pointer-events-none"
           />
-        </div>
+        </motion.div>
       )}
 
       {/* Title + meta */}
@@ -629,13 +672,16 @@ export default function DataSlate() {
                 href={block.content}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`inline-flex items-center gap-2 text-sm font-mono px-4 py-2.5 border rounded-sm transition-all ${
+                // 🌟 [FIXED]: เปลี่ยนจาก inline-flex เป็น flex, เติม max-w-full เพื่อจำกัดความกว้าง
+                className={`flex items-center gap-2 max-w-full text-sm font-mono px-4 py-2.5 border rounded-sm transition-all ${
                   isLight
                     ? 'border-sky-400/30 text-sky-300 bg-sky-500/5 hover:bg-sky-500/20'
                     : 'border-cyan-500/30 text-cyan-400 bg-cyan-500/5 hover:bg-cyan-500/10'
                 }`}
               >
-                <ExternalLink size={14} /> {block.content}
+                {/* 🌟 [FIXED]: เติม shrink-0 ป้องกันไอคอนเบี้ยว และห่อ text ด้วย truncate เพื่อตัดคำ ... ท้ายลิงก์ */}
+                <ExternalLink size={14} className="shrink-0" /> 
+                <span className="truncate">{block.content}</span>
               </a>
             );
           }
@@ -658,7 +704,8 @@ export default function DataSlate() {
                       alt={`img-${i}`}
                       loading={i < 2 ? 'eager' : 'lazy'}
                       style={{ height: `${imgHeight}px` }}
-                      className="object-cover rounded-sm border border-white/10 shrink-0 max-w-none max-h-[140px] sm:max-h-none"
+                      className="object-cover rounded-sm border border-white/10 shrink-0 max-w-none max-h-[140px] sm:max-h-none cursor-pointer hover:opacity-90 hover:border-cyan-400/50 transition-all"
+                      onClick={() => openLightbox(block.content.images, i)}
                     />
                   ))}
                 </div>
@@ -669,7 +716,8 @@ export default function DataSlate() {
         })}
       </div>
     </div>
-  );
+    );
+  };
 
   // ========================================================
   // 🛠️ RENDER 5b: PROJECTS LIST
@@ -836,6 +884,7 @@ export default function DataSlate() {
   };
 
   return (
+    <>
     <AnimatePresence>
       {isSummaryMode && (
         <motion.div
@@ -843,7 +892,8 @@ export default function DataSlate() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 30 }}
           transition={{ duration: 0.4, ease: 'easeOut' }}
-          className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none p-1 sm:p-4 md:p-8 pt-12 sm:pt-4"
+          // 🌟 [FIXED]: เปลี่ยน z-40 เป็น z-50 เพื่อให้การ์ดอยู่หน้าสุด และปรับระยะขอบมือถือเป็น p-3 pt-24
+          className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-3 pt-24 pb-4 sm:p-4 md:p-8 sm:pt-4"
         >
           {/* Backdrop scrim */}
           <div
@@ -854,7 +904,7 @@ export default function DataSlate() {
           {/* Frosted-glass modal */}
           <div className={`relative z-10 w-full max-w-5xl max-h-[90vh] overflow-x-hidden overflow-y-auto rounded-lg pointer-events-auto backdrop-blur-3xl flex flex-col custom-scrollbar border transition-all duration-300 ${
             isLight 
-              ? 'bg-white/10 border-sky-300/40 shadow-xl shadow-sky-950/50' 
+              ? 'bg-white/5 border-sky-300/40 shadow-xl shadow-sky-950/50' 
               : 'bg-black/40 border-cyan-500/30 shadow-xl shadow-[0_0_30px_rgba(34,211,238,0.1)]'
           }`}>
             
@@ -901,5 +951,245 @@ export default function DataSlate() {
         </motion.div>
       )}
     </AnimatePresence>
+
+    {/* ── Image Lightbox ── */}
+    <AnimatePresence>
+      {lightboxImages.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          /* pr-20 shifts the flex-center 40px left → image centers in non-nav area */
+          className={`fixed inset-0 z-[200] flex flex-col items-center justify-center pointer-events-auto sm:pr-20 ${isLight ? 'bg-white/5' : 'bg-black/92'}`}
+          onClick={closeLightbox}
+        >
+          {/* Close — anchored to real right edge, not affected by pr */}
+          <button
+            className={`absolute top-4 z-20 p-2 transition-colors ${isLight ? 'text-gray-500 hover:text-gray-900' : 'text-white/60 hover:text-white'}`}
+            style={{ right: '1rem' }}
+            onClick={(e) => { e.stopPropagation(); closeLightbox(); }}
+          >
+            <X size={28} />
+          </button>
+
+          {/* Image + directional effects */}
+          <div
+            className="relative flex items-center justify-center w-full px-12"
+          >
+            {/* wrapper sizes exactly to the image */}
+            <div className="relative inline-flex max-h-[70vh]" style={{ maxWidth: 'calc(100vw - 15rem)' }}>
+              {/* Image — instant swap, no slide */}
+              <img
+                src={lightboxImages[lightboxIndex]}
+                alt="lightbox"
+                className="max-h-[70vh] max-w-full object-contain rounded-sm block"
+              />
+
+              {/* Grid wipe — sweeps in the direction of nav press */}
+              {/* Grid flash — same as profile photo: flash then fade */}
+              <motion.div
+                key={`lb-grid-${lightboxIndex}`}
+                className="absolute inset-0 z-[1] pointer-events-none rounded-sm"
+                initial={{ opacity: 0.65 }}
+                animate={{ opacity: 0 }}
+                transition={{ duration: 0.9, ease: 'easeOut' }}
+                style={{
+                  backgroundImage: isLight
+                    ? 'linear-gradient(rgba(56,189,248,.35) 1px,transparent 1px),linear-gradient(90deg,rgba(56,189,248,.35) 1px,transparent 1px)'
+                    : 'linear-gradient(rgba(34,211,238,.35) 1px,transparent 1px),linear-gradient(90deg,rgba(34,211,238,.35) 1px,transparent 1px)',
+                  backgroundSize: '22px 22px',
+                }}
+              />
+
+              {/* Scan beam — wide soft glow sweeping in nav direction */}
+              <div className="absolute inset-0 z-[2] overflow-hidden pointer-events-none rounded-sm">
+                <motion.div
+                  key={`lb-beam-${lightboxIndex}`}
+                  className="absolute top-0 bottom-0"
+                  initial={{ left: lightboxDirectionRef.current > 0 ? '-18%' : '110%' }}
+                  animate={{ left: lightboxDirectionRef.current > 0 ? '110%' : '-18%' }}
+                  transition={{ duration: 0.55, ease: 'linear' }}
+                  style={{
+                    width: '18%',
+                    background: isLight
+                      ? 'linear-gradient(to right,transparent,rgba(56,189,248,.18) 40%,rgba(56,189,248,.28) 50%,rgba(56,189,248,.18) 60%,transparent)'
+                      : 'linear-gradient(to right,transparent,rgba(34,211,238,.18) 40%,rgba(34,211,238,.28) 50%,rgba(34,211,238,.18) 60%,transparent)',
+                  }}
+                />
+              </div>
+
+              {/* Scan line — sharp vertical bar leading the beam */}
+              <div className="absolute inset-0 z-[3] overflow-hidden pointer-events-none rounded-sm">
+                <motion.div
+                  key={`lb-scan-${lightboxIndex}`}
+                  className="absolute top-0 bottom-0"
+                  initial={{ left: lightboxDirectionRef.current > 0 ? -3 : '100%' }}
+                  animate={{
+                    left: lightboxDirectionRef.current > 0 ? '100%' : -3,
+                    opacity: [1, 1, 0.2],
+                  }}
+                  transition={{ duration: 0.52, ease: 'linear' }}
+                  style={{
+                    width: '2px',
+                    background: isLight
+                      ? 'linear-gradient(to bottom,transparent 0%,rgba(56,189,248,.95) 20%,rgba(56,189,248,.95) 80%,transparent 100%)'
+                      : 'linear-gradient(to bottom,transparent 0%,rgba(34,211,238,.95) 20%,rgba(34,211,238,.95) 80%,transparent 100%)',
+                    boxShadow: isLight
+                      ? '0 0 12px 5px rgba(56,189,248,.65)'
+                      : '0 0 12px 5px rgba(34,211,238,.65)',
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Nav buttons — left inside safe zone, right avoids nav panel */}
+          {lightboxImages.length > 1 && (
+            <>
+              <button
+                className={`absolute left-3 sm:left-5 top-1/2 -translate-y-1/2 p-2.5 rounded-full border transition-all pointer-events-auto ${isLight ? 'bg-white/80 hover:bg-white text-gray-700 border-gray-300' : 'bg-black/60 hover:bg-black/85 text-white border-white/20'}`}
+                style={{ zIndex: 10 }}
+                onClick={(e) => { e.stopPropagation(); navigateLightbox(-1, lightboxImages.length); }}
+              >
+                <ChevronLeft size={22} />
+              </button>
+              <button
+                className={`absolute top-1/2 -translate-y-1/2 p-2.5 rounded-full border transition-all pointer-events-auto ${isLight ? 'bg-white/80 hover:bg-white text-gray-700 border-gray-300' : 'bg-black/60 hover:bg-black/85 text-white border-white/20'}`}
+                style={{ right: '5.5rem', zIndex: 10 }}
+                onClick={(e) => { e.stopPropagation(); navigateLightbox(1, lightboxImages.length); }}
+              >
+                <ChevronRight size={22} />
+              </button>
+              <span className={`absolute bottom-5 font-mono text-xs pointer-events-none select-none ${isLight ? 'text-gray-400' : 'text-white/40'}`} style={{ left: '50%', transform: 'translateX(calc(-50% - 2.5rem))' }}>
+                {lightboxIndex + 1} / {lightboxImages.length}
+              </span>
+            </>
+          )}
+        </motion.div>
+      )}
+    </AnimatePresence>
+
+    {/* ── Shared Element Expanded Views ── */}
+    <AnimatePresence>
+      {selectedCard && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-150 bg-black/70 backdrop-blur-md pointer-events-auto"
+            onClick={() => setSelectedCard(null)}
+          />
+          <div className="fixed inset-0 z-151 flex items-center justify-center pointer-events-none px-4 sm:pr-24">
+
+            {selectedCard === 'photo' && (
+              <motion.div
+                layoutId="hud-photo"
+                transition={{ type: 'spring', stiffness: 340, damping: 30 }}
+                className={`relative rounded-sm overflow-hidden border pointer-events-auto ${isLight ? 'bg-white/5 border-sky-300/40' : 'bg-black/60 border-cyan-500/30'}`}
+                style={{ width: 'min(320px, 80vw)', aspectRatio: '3/4', maxHeight: '80vh' }}
+              >
+                {cornerBrackets('w-6 h-6', isLight ? 'border-sky-400' : 'border-cyan-400')}
+                <AnimatePresence mode="popLayout">
+                  <motion.img key={currentImageIndex} src={slideshowSrc[currentImageIndex % slideshowSrc.length]} alt="Profile"
+                    initial={{ opacity: 0 }} animate={{ opacity: 0.95 }} exit={{ opacity: 0 }} transition={{ duration: 0.8 }}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                </AnimatePresence>
+                <motion.div key={`scan-exp-${currentImageIndex}`} initial={{ top: '-2px', opacity: 1 }} animate={{ top: '102%', opacity: 0.4 }}
+                  transition={{ duration: 0.6, ease: 'linear' }} className="absolute inset-x-0 h-0.5 z-[2] pointer-events-none"
+                  style={{ position: 'absolute', background: isLight ? 'linear-gradient(90deg,transparent,rgba(56,189,248,.95) 50%,transparent)' : 'linear-gradient(90deg,transparent,rgba(34,211,238,.95) 50%,transparent)', boxShadow: isLight ? '0 0 10px 2px rgba(56,189,248,.6)' : '0 0 10px 2px rgba(34,211,238,.65)' }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+                {slideshowSrc.length > 1 && (
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+                    {slideshowSrc.map((_, i) => (
+                      <button key={i} onClick={() => setCurrentImageIndex(i)}
+                        className={`h-1.5 rounded-full transition-all ${i === currentImageIndex ? (isLight ? 'bg-sky-400 w-5' : 'bg-cyan-400 w-5') : 'bg-white/30 w-1.5'}`}
+                      />
+                    ))}
+                  </div>
+                )}
+                <button onClick={() => setSelectedCard(null)} className="absolute top-2.5 right-2.5 z-30 p-1.5 bg-black/50 hover:bg-black/80 rounded-full text-white/60 hover:text-white transition-all"><X size={16} /></button>
+              </motion.div>
+            )}
+
+            {selectedCard === 'bio' && (
+              <motion.div layoutId="hud-bio" transition={{ type: 'spring', stiffness: 340, damping: 30 }}
+                className={`relative rounded-sm border pointer-events-auto w-full max-w-xl ${isLight ? 'bg-white/8 border-sky-300/30' : 'bg-cyan-950/30 border-cyan-500/25'}`}
+              >
+                <div className="p-6 sm:p-8">
+                  <p className={`text-xs font-mono tracking-widest mb-4 ${isLight ? 'text-sky-400/60' : 'text-gray-500'}`}>[ BIOGRAPHY ]</p>
+                  <p className={`text-sm leading-relaxed ${isLight ? 'text-sky-100/90' : 'text-gray-200'}`}>{personalInfo.description}</p>
+                </div>
+                <button onClick={() => setSelectedCard(null)} className="absolute top-3 right-3 p-1.5 bg-black/50 hover:bg-black/80 rounded-full text-white/60 hover:text-white transition-all"><X size={16} /></button>
+              </motion.div>
+            )}
+
+            {selectedCard === 'contact' && (
+              <motion.div layoutId="hud-contact" transition={{ type: 'spring', stiffness: 340, damping: 30 }}
+                className={`relative rounded-sm border overflow-hidden pointer-events-auto w-full max-w-xl ${isLight ? 'border-sky-300/30' : 'border-white/10'}`}
+              >
+                <div className={`px-6 pt-5 pb-3 ${isLight ? 'bg-sky-500/5' : 'bg-white/5'}`}>
+                  <p className={`text-xs font-mono tracking-widest ${isLight ? 'text-sky-400/60' : 'text-gray-500'}`}>[ CONTACT MATRIX ]</p>
+                </div>
+                {contactItems.map((c, idx) => (
+                  <div key={idx} className={`flex items-center gap-4 px-6 py-4 border-t ${isLight ? 'border-sky-300/10 bg-white/5' : 'border-white/5 bg-black/30'}`}>
+                    <span className={isLight ? 'text-sky-400' : 'text-cyan-400'}>{c.icon}</span>
+                    <span className={`font-mono text-xs w-20 shrink-0 ${isLight ? 'text-sky-400/60' : 'text-gray-500'}`}>{c.label}</span>
+                    <span className="text-sm text-white break-all">{c.val}</span>
+                  </div>
+                ))}
+                <button onClick={() => setSelectedCard(null)} className="absolute top-3 right-3 p-1.5 bg-black/50 hover:bg-black/80 rounded-full text-white/60 hover:text-white transition-all"><X size={16} /></button>
+              </motion.div>
+            )}
+
+            {selectedCard === 'education' && (
+              <motion.div layoutId="hud-education" transition={{ type: 'spring', stiffness: 340, damping: 30 }}
+                className={`relative rounded-sm border pointer-events-auto w-full max-w-xl ${isLight ? 'bg-white/8 border-sky-300/30' : 'bg-white/3 border-white/10'}`}
+              >
+                <div className="p-6 sm:p-8 flex items-center gap-6">
+                  {education.universityLogo && (
+                    <img src={education.universityLogo} alt="University" className="w-20 h-20 object-contain shrink-0 opacity-90 cursor-pointer hover:opacity-100 transition-opacity"
+                      onClick={() => { setSelectedCard(null); openLightbox([education.universityLogo]); }}
+                    />
+                  )}
+                  <div>
+                    <p className={`text-xs font-mono mb-3 ${isLight ? 'text-sky-400/60' : 'text-gray-500'}`}><GraduationCap size={11} className="inline mr-1.5" />ORIGIN</p>
+                    {education.universityName && <p className="text-xl text-white font-serif leading-snug">{education.universityName}</p>}
+                    {education.major && <p className={`text-sm mt-1.5 ${isLight ? 'text-sky-300' : 'text-cyan-400'}`}>{education.major}</p>}
+                    {eduLine && <p className={`text-xs font-mono mt-1.5 ${isLight ? 'text-sky-200/50' : 'text-gray-600'}`}>{eduLine}</p>}
+                  </div>
+                </div>
+                <button onClick={() => setSelectedCard(null)} className="absolute top-3 right-3 p-1.5 bg-black/50 hover:bg-black/80 rounded-full text-white/60 hover:text-white transition-all"><X size={16} /></button>
+              </motion.div>
+            )}
+          </div>
+        </>
+      )}
+    </AnimatePresence>
+
+    {/* ── Project Cover Expanded ── */}
+    <AnimatePresence>
+      {selectedProjCover && (
+        <>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-150 bg-black/80 backdrop-blur-md pointer-events-auto"
+            onClick={() => setSelectedProjCover(null)}
+          />
+          <div className="fixed inset-0 z-151 flex items-center justify-center pointer-events-none px-4 sm:pr-24 py-8">
+            <motion.div layoutId={`proj-cover-${selectedProjCover.id}`} transition={{ type: 'spring', stiffness: 340, damping: 30 }}
+              className={`relative rounded-sm overflow-hidden border pointer-events-auto w-full max-w-3xl ${isLight ? 'border-sky-300/30 bg-white/5' : 'border-white/10 bg-black/40'}`}
+              style={{ maxHeight: '82vh' }}
+            >
+              <div className="absolute inset-0 bg-cover bg-center opacity-30 blur-xl" style={{ backgroundImage: `url(${selectedProjCover.src})` }} />
+              <img src={selectedProjCover.src} alt="cover" className="relative z-10 w-full h-full object-contain max-h-[82vh] drop-shadow-2xl" />
+              <button onClick={() => setSelectedProjCover(null)} className="absolute top-3 right-3 z-20 p-1.5 bg-black/60 hover:bg-black/90 rounded-full text-white/60 hover:text-white transition-all"><X size={18} /></button>
+            </motion.div>
+          </div>
+        </>
+      )}
+    </AnimatePresence>
+    </>
   );
 }

@@ -65,9 +65,11 @@ export default function RootLayout({
 
         {/* 🌟 2. STAGE MANAGEMENT: คุมคิวอุปกรณ์การแสดงผลแยก Desktop และ Mobile */}
         
+        {/* SectorHud แสดงทุกขนาดหน้าจอ */}
+        <SectorHud />
+
         {/* หน้าจอระดับ DESKTOP (ขนาด md ขึ้นไป): แสดงแผงผังเรดาร์และปุ่มเปลี่ยนธีมดั้งเดิม */}
         <div className="hidden md:block">
-          <SectorHud />
           <RadarHud />
           <ThemeToggle />
           <VolumeControl />

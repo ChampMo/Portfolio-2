@@ -224,6 +224,8 @@ export default function SectorHud() {
           className="fixed left-6 top-6 z-40 pointer-events-none"
         >
           <div className="flex items-start gap-2">
+          {/* Sector card — desktop only */}
+          <div className="hidden md:block">
           <AnimatePresence mode="wait">
             <motion.div
               key={pathname}
@@ -231,7 +233,7 @@ export default function SectorHud() {
               animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
               exit={{ opacity: 0, y: -8, filter: 'blur(6px)' }}
               transition={{ duration: 0.35, ease: 'easeOut' }}
-              className={`pointer-events-auto w-70 backdrop-blur-md border rounded-sm overflow-hidden transition-all duration-300 ${
+              className={`pointer-events-auto w-52 sm:w-70 backdrop-blur-md border rounded-sm overflow-hidden transition-all duration-300 ${
                 isLight
                   ? 'bg-white/10 border-sky-300/40 text-sky-300 shadow-md shadow-sky-950/40'
                   : `bg-black/55 ${sector.accentBorder} shadow-lg shadow-black/50 dark:shadow-[0_0_20px_rgba(34,211,238,0.08)]`
@@ -312,14 +314,15 @@ export default function SectorHud() {
               <div className={`h-px bg-linear-to-r from-transparent via-current to-transparent opacity-30 ${sector.accent}`} />
             </motion.div>
           </AnimatePresence>
+          </div>
 
-          {/* Admin access button — circular, fixed top-right, hidden on admin routes */}
+          {/* Admin access button — circular, fixed top-right, desktop only (mobile uses MobileMenu) */}
           {!pathname.startsWith('/admin') && (
             <Link
               href="/admin"
               title="Admin Access"
               onClick={playSettingClick}
-              className={`fixed top-4 right-4 z-300 w-10 h-10 rounded-full flex items-center justify-center border backdrop-blur-md transition-all pointer-events-auto ${
+              className={`hidden md:flex fixed top-4 right-4 z-300 w-10 h-10 rounded-full items-center justify-center border backdrop-blur-md transition-all pointer-events-auto ${
                 isLight
                   ? 'bg-white/70 border-purple-400/40 text-purple-500 hover:bg-purple-100 hover:border-purple-500/70 shadow-[0_4px_20px_rgba(168,85,247,0.15)]'
                   : 'bg-black/60 border-purple-500/40 text-purple-400 hover:bg-purple-500/15 hover:border-purple-300/70 shadow-[0_0_20px_rgba(168,85,247,0.25)]'
@@ -330,13 +333,13 @@ export default function SectorHud() {
           )}
 
           {/* Active explorers counter */}
-          <div className={`pointer-events-auto flex items-center gap-2 px-3 py-2 backdrop-blur-md border rounded-sm font-mono text-[9px] tracking-[0.2em] uppercase select-none whitespace-nowrap ${
+          <div className={`pointer-events-auto flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 backdrop-blur-md border rounded-sm font-mono text-[9px] tracking-[0.2em] uppercase select-none whitespace-nowrap ${
             isLight
               ? 'bg-white/5 border-sky-300/30 text-sky-400/70 shadow-md shadow-sky-950/40'
               : 'bg-black/40 border-cyan-500/20 text-cyan-500/60 shadow-lg shadow-black/50'
           }`}>
             <Users size={11} className={isLight ? 'text-sky-400' : 'text-cyan-400'} />
-            <span>EXPLORERS</span>
+            <span className="hidden sm:inline">EXPLORERS</span>
             <span className={`font-bold tabular-nums ${isLight ? 'text-sky-300' : 'text-cyan-300'}`}>
               [{activeExplorerCount}]
             </span>

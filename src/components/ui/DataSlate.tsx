@@ -10,7 +10,7 @@ import { Icon } from '@iconify/react';
 import {
   X, Download, Calendar, Cpu, Code, Database, Layout,
   Wrench, Briefcase, ChevronRight, ChevronLeft, FolderGit2,
-  ExternalLink, Image as ImageIcon, Mail, Phone, MapPin, GraduationCap, Link2, Check, Scroll,
+  ExternalLink, Image as ImageIcon, Mail, Phone, MapPin, GraduationCap, Link2, Check, Scroll, Copy, Send,
 } from 'lucide-react';
 
 interface AboutmeData {
@@ -50,6 +50,15 @@ export default function DataSlate() {
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [copiedContact, setCopiedContact] = useState<string | null>(null);
+
+  const handleCopyContact = async (e: React.MouseEvent, label: string, val: string) => {
+    e.stopPropagation();
+    playClick();
+    await navigator.clipboard.writeText(val).catch(() => {});
+    setCopiedContact(label);
+    setTimeout(() => setCopiedContact(null), 2000);
+  };
 
   // Lightbox & shared-element state
   const [lightboxImages, setLightboxImages] = useState<string[]>([]);
@@ -58,12 +67,14 @@ export default function DataSlate() {
   const [selectedProjCover, setSelectedProjCover] = useState<{ src: string; id: string } | null>(null);
   const lightboxDirectionRef = useRef<number>(1);
   const openLightbox = (images: string[], index = 0) => {
+    playClick();
     lightboxDirectionRef.current = 1;
     setLightboxImages(images);
     setLightboxIndex(index);
   };
-  const closeLightbox = () => setLightboxImages([]);
+  const closeLightbox = () => { playClick(); setLightboxImages([]); };
   const navigateLightbox = (dir: -1 | 1, total: number) => {
+    playClick();
     lightboxDirectionRef.current = dir;
     setLightboxIndex((p) => (p + dir + total) % total);
   };
@@ -258,7 +269,7 @@ export default function DataSlate() {
                 isLight ? 'bg-white/5 border-sky-300/30' : 'bg-black/60 border-cyan-500/20'
               }`}
               style={{ opacity: selectedCard === 'photo' ? 0 : 1, pointerEvents: selectedCard === 'photo' ? 'none' : 'auto' }}
-              onClick={() => setSelectedCard('photo')}
+              onClick={() => { playClick(); setSelectedCard('photo'); }}
             >
               {cornerBrackets('w-4 h-4', isLight ? 'border-sky-400' : 'border-cyan-400')}
               <AnimatePresence mode="popLayout">
@@ -380,7 +391,7 @@ export default function DataSlate() {
                   isLight ? 'bg-white/5 border-sky-300/20' : 'bg-cyan-950/10 border-cyan-500/15'
                 }`}
                 style={{ opacity: selectedCard === 'bio' ? 0 : undefined, pointerEvents: selectedCard === 'bio' ? 'none' : 'auto' }}
-                onClick={() => setSelectedCard('bio')}
+                onClick={() => { playClick(); setSelectedCard('bio'); }}
               >
                 <p className={`text-xs font-mono tracking-widest mb-2 ${isLight ? 'text-sky-400/50' : 'text-gray-600'}`}>[ BIOGRAPHY ]</p>
                 <p className={`text-sm leading-relaxed line-clamp-3 ${isLight ? 'text-sky-100/90' : 'text-gray-300'}`}>
@@ -395,16 +406,39 @@ export default function DataSlate() {
                 layoutId="hud-contact"
                 transition={{ type: 'spring', stiffness: 340, damping: 30 }}
                 className={`grid gap-px border rounded-sm overflow-hidden cursor-pointer hover:opacity-80 transition-opacity ${
-                  isLight ? 'border-sky-300/20 bg-sky-300/10' : 'border-white/8 bg-white/8'
+                  isLight ? 'border-sky-300/20 bg-white/5' : 'border-white/8 bg-white/8'
                 }`}
                 style={{ opacity: selectedCard === 'contact' ? 0 : undefined, pointerEvents: selectedCard === 'contact' ? 'none' : 'auto' }}
-                onClick={() => setSelectedCard('contact')}
+                onClick={() => { playClick(); setSelectedCard('contact'); }}
               >
                 {contactItems.map((c, idx) => (
                   <div key={idx} className={`flex items-center gap-3 px-4 py-2.5 ${isLight ? 'bg-white/5' : 'bg-black/30'}`}>
                     <span className={`shrink-0 ${isLight ? 'text-sky-400/60' : 'text-gray-500'}`}>{c.icon}</span>
                     <span className={`text-xs font-mono tracking-widest w-16 shrink-0 ${isLight ? 'text-sky-400/60' : 'text-gray-500'}`}>{c.label}</span>
-                    <span className="text-xs text-white/80 truncate">{c.val}</span>
+                    <span className="text-xs text-white/80 truncate flex-1">{c.val}</span>
+                    {c.label === 'EMAIL' && (
+                      <a
+                        href={`mailto:${c.val}`}
+                        onClick={(e) => { e.stopPropagation(); playClick(); }}
+                        className={`shrink-0 p-1 rounded-sm transition-all ${
+                          isLight ? 'text-sky-400/30 hover:text-sky-300' : 'text-gray-600 hover:text-cyan-400'
+                        }`}
+                      >
+                        <Send size={12} />
+                      </a>
+                    )}
+                    {(c.label === 'EMAIL' || c.label === 'PHONE') && (
+                      <button
+                        onClick={(e) => handleCopyContact(e, c.label, c.val)}
+                        className={`shrink-0 p-1 rounded-sm transition-all ${
+                          copiedContact === c.label
+                            ? 'text-emerald-400'
+                            : isLight ? 'text-sky-400/30 hover:text-sky-300' : 'text-gray-600 hover:text-cyan-400'
+                        }`}
+                      >
+                        {copiedContact === c.label ? <Check size={12} /> : <Copy size={12} />}
+                      </button>
+                    )}
                   </div>
                 ))}
               </motion.div>
@@ -419,7 +453,7 @@ export default function DataSlate() {
                   isLight ? 'bg-white/5 border-sky-300/20' : 'bg-white/3 border-white/8'
                 }`}
                 style={{ opacity: selectedCard === 'education' ? 0 : undefined, pointerEvents: selectedCard === 'education' ? 'none' : 'auto' }}
-                onClick={() => setSelectedCard('education')}
+                onClick={() => { playClick(); setSelectedCard('education'); }}
               >
                 {education.universityLogo && (
                   <img src={education.universityLogo} alt="University" className="w-11 h-11 object-contain shrink-0 opacity-80" />
@@ -614,7 +648,7 @@ export default function DataSlate() {
             isLight ? 'border-sky-300/20 bg-white/5' : 'border-white/10 bg-black/40'
           }`}
           style={{ opacity: selectedProjCover?.id === String(proj._id) ? 0 : 1 }}
-          onClick={() => setSelectedProjCover({ src: proj.coverImage, id: String(proj._id) })}
+          onClick={() => { playClick(); setSelectedProjCover({ src: proj.coverImage, id: String(proj._id) }); }}
         >
           <div className="absolute inset-0 bg-cover bg-center opacity-30 blur-xl" style={{ backgroundImage: `url(${proj.coverImage})` }} />
           <img
@@ -850,7 +884,7 @@ export default function DataSlate() {
             {[0.1, 0.22, 0.34, 0.46].map((d, i) => (
               <motion.div
                 key={i}
-                className={`h-18.5 rounded-sm border ${isLight ? 'bg-sky-500/5 border-sky-300/20' : 'bg-cyan-500/4 border-cyan-500/15'}`}
+                className={`h-18.5 rounded-sm border ${isLight ? 'bg-white/5 border-sky-300/20' : 'bg-cyan-500/4 border-cyan-500/15'}`}
                 animate={{ opacity: [0.35, 0.75, 0.35] }}
                 transition={{ duration: 1.4, repeat: Infinity, delay: d }}
               />
@@ -1078,7 +1112,7 @@ export default function DataSlate() {
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="fixed inset-0 z-150 bg-black/70 backdrop-blur-md pointer-events-auto"
-            onClick={() => setSelectedCard(null)}
+            onClick={() => { playClick(); setSelectedCard(null); }}
           />
           <div className="fixed inset-0 z-151 flex items-center justify-center pointer-events-none px-4 sm:pr-24">
 
@@ -1104,25 +1138,25 @@ export default function DataSlate() {
                 {slideshowSrc.length > 1 && (
                   <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2">
                     {slideshowSrc.map((_, i) => (
-                      <button key={i} onClick={() => setCurrentImageIndex(i)}
+                      <button key={i} onClick={() => { playClick(); setCurrentImageIndex(i); }}
                         className={`h-1.5 rounded-full transition-all ${i === currentImageIndex ? (isLight ? 'bg-sky-400 w-5' : 'bg-cyan-400 w-5') : 'bg-white/30 w-1.5'}`}
                       />
                     ))}
                   </div>
                 )}
-                <button onClick={() => setSelectedCard(null)} className="absolute top-2.5 right-2.5 z-30 p-1.5 bg-black/50 hover:bg-black/80 rounded-full text-white/60 hover:text-white transition-all"><X size={16} /></button>
+                <button onClick={() => { playClick(); setSelectedCard(null); }} className="absolute top-2.5 right-2.5 z-30 p-1.5 bg-black/50 hover:bg-black/80 rounded-full text-white/60 hover:text-white transition-all"><X size={16} /></button>
               </motion.div>
             )}
 
             {selectedCard === 'bio' && (
               <motion.div layoutId="hud-bio" transition={{ type: 'spring', stiffness: 340, damping: 30 }}
-                className={`relative rounded-sm border pointer-events-auto w-full max-w-xl ${isLight ? 'bg-white/8 border-sky-300/30' : 'bg-cyan-950/30 border-cyan-500/25'}`}
+                className={`relative rounded-sm border pointer-events-auto w-full max-w-xl ${isLight ? 'bg-white/5 border-sky-300/30' : 'bg-cyan-950/30 border-cyan-500/25'}`}
               >
                 <div className="p-6 sm:p-8">
                   <p className={`text-xs font-mono tracking-widest mb-4 ${isLight ? 'text-sky-400/60' : 'text-gray-500'}`}>[ BIOGRAPHY ]</p>
                   <p className={`text-sm leading-relaxed ${isLight ? 'text-sky-100/90' : 'text-gray-200'}`}>{personalInfo.description}</p>
                 </div>
-                <button onClick={() => setSelectedCard(null)} className="absolute top-3 right-3 p-1.5 bg-black/50 hover:bg-black/80 rounded-full text-white/60 hover:text-white transition-all"><X size={16} /></button>
+                <button onClick={() => { playClick(); setSelectedCard(null); }} className="absolute top-3 right-3 p-1.5 bg-black/50 hover:bg-black/80 rounded-full text-white/60 hover:text-white transition-all"><X size={16} /></button>
               </motion.div>
             )}
 
@@ -1130,23 +1164,46 @@ export default function DataSlate() {
               <motion.div layoutId="hud-contact" transition={{ type: 'spring', stiffness: 340, damping: 30 }}
                 className={`relative rounded-sm border overflow-hidden pointer-events-auto w-full max-w-xl ${isLight ? 'border-sky-300/30' : 'border-white/10'}`}
               >
-                <div className={`px-6 pt-5 pb-3 ${isLight ? 'bg-sky-500/5' : 'bg-white/5'}`}>
+                <div className="px-6 pt-5 pb-3 bg-white/5">
                   <p className={`text-xs font-mono tracking-widest ${isLight ? 'text-sky-400/60' : 'text-gray-500'}`}>[ CONTACT MATRIX ]</p>
                 </div>
                 {contactItems.map((c, idx) => (
                   <div key={idx} className={`flex items-center gap-4 px-6 py-4 border-t ${isLight ? 'border-sky-300/10 bg-white/5' : 'border-white/5 bg-black/30'}`}>
                     <span className={isLight ? 'text-sky-400' : 'text-cyan-400'}>{c.icon}</span>
                     <span className={`font-mono text-xs w-20 shrink-0 ${isLight ? 'text-sky-400/60' : 'text-gray-500'}`}>{c.label}</span>
-                    <span className="text-sm text-white break-all">{c.val}</span>
+                    <span className="text-sm text-white break-all flex-1">{c.val}</span>
+                    {c.label === 'EMAIL' && (
+                      <a
+                        href={`mailto:${c.val}`}
+                        onClick={playClick}
+                        className={`shrink-0 p-1.5 rounded-sm transition-all ${
+                          isLight ? 'text-sky-400/30 hover:text-sky-300' : 'text-gray-600 hover:text-cyan-400'
+                        }`}
+                      >
+                        <Send size={14} />
+                      </a>
+                    )}
+                    {(c.label === 'EMAIL' || c.label === 'PHONE') && (
+                      <button
+                        onClick={(e) => handleCopyContact(e, c.label, c.val)}
+                        className={`shrink-0 p-1.5 rounded-sm transition-all ${
+                          copiedContact === c.label
+                            ? 'text-emerald-400'
+                            : isLight ? 'text-sky-400/30 hover:text-sky-300' : 'text-gray-600 hover:text-cyan-400'
+                        }`}
+                      >
+                        {copiedContact === c.label ? <Check size={14} /> : <Copy size={14} />}
+                      </button>
+                    )}
                   </div>
                 ))}
-                <button onClick={() => setSelectedCard(null)} className="absolute top-3 right-3 p-1.5 bg-black/50 hover:bg-black/80 rounded-full text-white/60 hover:text-white transition-all"><X size={16} /></button>
+                <button onClick={() => { playClick(); setSelectedCard(null); }} className="absolute top-3 right-3 p-1.5 bg-black/50 hover:bg-black/80 rounded-full text-white/60 hover:text-white transition-all"><X size={16} /></button>
               </motion.div>
             )}
 
             {selectedCard === 'education' && (
               <motion.div layoutId="hud-education" transition={{ type: 'spring', stiffness: 340, damping: 30 }}
-                className={`relative rounded-sm border pointer-events-auto w-full max-w-xl ${isLight ? 'bg-white/8 border-sky-300/30' : 'bg-white/3 border-white/10'}`}
+                className={`relative rounded-sm border pointer-events-auto w-full max-w-xl ${isLight ? 'bg-white/5 border-sky-300/30' : 'bg-white/3 border-white/10'}`}
               >
                 <div className="p-6 sm:p-8 flex items-center gap-6">
                   {education.universityLogo && (
@@ -1161,7 +1218,7 @@ export default function DataSlate() {
                     {eduLine && <p className={`text-xs font-mono mt-1.5 ${isLight ? 'text-sky-200/50' : 'text-gray-600'}`}>{eduLine}</p>}
                   </div>
                 </div>
-                <button onClick={() => setSelectedCard(null)} className="absolute top-3 right-3 p-1.5 bg-black/50 hover:bg-black/80 rounded-full text-white/60 hover:text-white transition-all"><X size={16} /></button>
+                <button onClick={() => { playClick(); setSelectedCard(null); }} className="absolute top-3 right-3 p-1.5 bg-black/50 hover:bg-black/80 rounded-full text-white/60 hover:text-white transition-all"><X size={16} /></button>
               </motion.div>
             )}
           </div>
@@ -1175,7 +1232,7 @@ export default function DataSlate() {
         <>
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
             className="fixed inset-0 z-150 bg-black/80 backdrop-blur-md pointer-events-auto"
-            onClick={() => setSelectedProjCover(null)}
+            onClick={() => { playClick(); setSelectedProjCover(null); }}
           />
           <div className="fixed inset-0 z-151 flex items-center justify-center pointer-events-none px-4 sm:pr-24 py-8">
             <motion.div layoutId={`proj-cover-${selectedProjCover.id}`} transition={{ type: 'spring', stiffness: 340, damping: 30 }}
@@ -1184,7 +1241,7 @@ export default function DataSlate() {
             >
               <div className="absolute inset-0 bg-cover bg-center opacity-30 blur-xl" style={{ backgroundImage: `url(${selectedProjCover.src})` }} />
               <img src={selectedProjCover.src} alt="cover" className="relative z-10 w-full h-full object-contain max-h-[82vh] drop-shadow-2xl" />
-              <button onClick={() => setSelectedProjCover(null)} className="absolute top-3 right-3 z-20 p-1.5 bg-black/60 hover:bg-black/90 rounded-full text-white/60 hover:text-white transition-all"><X size={18} /></button>
+              <button onClick={() => { playClick(); setSelectedProjCover(null); }} className="absolute top-3 right-3 z-20 p-1.5 bg-black/60 hover:bg-black/90 rounded-full text-white/60 hover:text-white transition-all"><X size={18} /></button>
             </motion.div>
           </div>
         </>

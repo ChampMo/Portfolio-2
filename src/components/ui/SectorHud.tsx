@@ -235,7 +235,7 @@ export default function SectorHud() {
               transition={{ duration: 0.35, ease: 'easeOut' }}
               className={`pointer-events-auto w-52 sm:w-70 backdrop-blur-md border rounded-sm overflow-hidden transition-all duration-300 ${
                 isLight
-                  ? 'bg-white/10 border-sky-300/40 text-sky-300 shadow-md shadow-sky-950/40'
+                  ? 'bg-white/5 border-sky-300/40 text-sky-300 shadow-md shadow-sky-950/40'
                   : `bg-black/55 ${sector.accentBorder} shadow-lg shadow-black/50 dark:shadow-[0_0_20px_rgba(34,211,238,0.08)]`
               }`}
             >

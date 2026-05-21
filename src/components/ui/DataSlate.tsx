@@ -377,7 +377,11 @@ export default function DataSlate() {
                   </span>
                 )}
                 {personalInfo.motto && (
-                  <span className="text-xs text-gray-400 italic">{personalInfo.motto}</span>
+                  <span className={`text-xs italic ${
+                    isLight ? 'text-slate-400 font-medium' : 'text-sky-100/80'
+                  }`}>
+                    "{personalInfo.motto}"
+                  </span>
                 )}
               </div>
             </div>
@@ -938,7 +942,7 @@ export default function DataSlate() {
           {/* Frosted-glass modal */}
           <div className={`relative z-10 w-full max-w-5xl max-h-[90vh] overflow-x-hidden overflow-y-auto rounded-lg pointer-events-auto backdrop-blur-3xl flex flex-col custom-scrollbar border transition-all duration-300 ${
             isLight 
-              ? 'bg-white/5 border-sky-300/40 shadow-xl shadow-sky-950/50' 
+              ? ' border-sky-300/40 shadow-xl shadow-sky-950/50' 
               : 'bg-black/40 border-cyan-500/30 shadow-xl shadow-[0_0_30px_rgba(34,211,238,0.1)]'
           }`}>
             
@@ -1106,104 +1110,70 @@ export default function DataSlate() {
 
     {/* ── Shared Element Expanded Views ── */}
     <AnimatePresence>
-      {selectedCard && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-150 bg-black/70 backdrop-blur-md pointer-events-auto"
-            onClick={() => { playClick(); setSelectedCard(null); }}
-          />
-          <div className="fixed inset-0 z-151 flex items-center justify-center pointer-events-none px-4 sm:pr-24">
-
+      {(selectedCard || selectedProjCover) && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
+          className={`fixed inset-0 z-[150] backdrop-blur-md flex items-center justify-center pointer-events-auto px-4 sm:pr-24 py-8 ${isLight ? 'bg-slate-200/50' : 'bg-black/70'}`}
+          onClick={() => { playClick(); setSelectedCard(null); setSelectedProjCover(null); }}
+        >
+          <div className="relative w-full max-w-3xl flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+            
             {selectedCard === 'photo' && (
-              <motion.div
-                layoutId="hud-photo"
-                transition={{ type: 'spring', stiffness: 340, damping: 30 }}
-                className={`relative rounded-sm overflow-hidden border pointer-events-auto ${isLight ? 'bg-white/5 border-sky-300/40' : 'bg-black/60 border-cyan-500/30'}`}
+              <motion.div layoutId="hud-photo" transition={{ type: 'spring', stiffness: 340, damping: 30 }}
+                className={`relative rounded-sm overflow-hidden border ${isLight ? 'bg-white/5 border-sky-300/40 shadow-xl' : 'bg-black/60 border-cyan-500/30'}`}
                 style={{ width: 'min(320px, 80vw)', aspectRatio: '3/4', maxHeight: '80vh' }}
               >
                 {cornerBrackets('w-6 h-6', isLight ? 'border-sky-400' : 'border-cyan-400')}
-                <AnimatePresence mode="popLayout">
-                  <motion.img key={currentImageIndex} src={slideshowSrc[currentImageIndex % slideshowSrc.length]} alt="Profile"
-                    initial={{ opacity: 0 }} animate={{ opacity: 0.95 }} exit={{ opacity: 0 }} transition={{ duration: 0.8 }}
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                </AnimatePresence>
-                <motion.div key={`scan-exp-${currentImageIndex}`} initial={{ top: '-2px', opacity: 1 }} animate={{ top: '102%', opacity: 0.4 }}
-                  transition={{ duration: 0.6, ease: 'linear' }} className="absolute inset-x-0 h-0.5 z-[2] pointer-events-none"
-                  style={{ position: 'absolute', background: isLight ? 'linear-gradient(90deg,transparent,rgba(56,189,248,.95) 50%,transparent)' : 'linear-gradient(90deg,transparent,rgba(34,211,238,.95) 50%,transparent)', boxShadow: isLight ? '0 0 10px 2px rgba(56,189,248,.6)' : '0 0 10px 2px rgba(34,211,238,.65)' }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
-                {slideshowSrc.length > 1 && (
-                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2">
-                    {slideshowSrc.map((_, i) => (
-                      <button key={i} onClick={() => { playClick(); setCurrentImageIndex(i); }}
-                        className={`h-1.5 rounded-full transition-all ${i === currentImageIndex ? (isLight ? 'bg-sky-400 w-5' : 'bg-cyan-400 w-5') : 'bg-white/30 w-1.5'}`}
-                      />
-                    ))}
-                  </div>
-                )}
-                <button onClick={() => { playClick(); setSelectedCard(null); }} className="absolute top-2.5 right-2.5 z-30 p-1.5 bg-black/50 hover:bg-black/80 rounded-full text-white/60 hover:text-white transition-all"><X size={16} /></button>
+                <motion.img src={slideshowSrc[currentImageIndex % slideshowSrc.length]} alt="Profile" className="w-full h-full object-cover" />
+                <button onClick={() => { playClick(); setSelectedCard(null); }} className={`absolute top-2.5 right-2.5 z-30 p-1.5 rounded-full transition-all ${isLight ? 'bg-sky-100 hover:bg-sky-200 text-sky-900' : 'bg-black/50 hover:bg-black/80 text-white/60 hover:text-white'}`}><X size={16} /></button>
               </motion.div>
             )}
 
             {selectedCard === 'bio' && (
               <motion.div layoutId="hud-bio" transition={{ type: 'spring', stiffness: 340, damping: 30 }}
-                className={`relative rounded-sm border pointer-events-auto w-full max-w-xl ${isLight ? 'bg-white/5 border-sky-300/30' : 'bg-cyan-950/30 border-cyan-500/25'}`}
+                // 🌟 [FIXED]: ใช้ bg-white/5 คงเดิม แต่เพิ่มเงาและเบลอให้กล่องตัดกับฉากหลัง
+                className={`relative rounded-sm border p-6 sm:p-8 w-full max-w-xl ${isLight ? 'bg-white/5 border-sky-300/40 shadow-xl backdrop-blur-md' : 'bg-cyan-950/30 border-cyan-500/25'}`}
               >
-                <div className="p-6 sm:p-8">
-                  <p className={`text-xs font-mono tracking-widest mb-4 ${isLight ? 'text-sky-400/60' : 'text-gray-500'}`}>[ BIOGRAPHY ]</p>
-                  <p className={`text-sm leading-relaxed ${isLight ? 'text-sky-100/90' : 'text-gray-200'}`}>{personalInfo.description}</p>
-                </div>
-                <button onClick={() => { playClick(); setSelectedCard(null); }} className="absolute top-3 right-3 p-1.5 bg-black/50 hover:bg-black/80 rounded-full text-white/60 hover:text-white transition-all"><X size={16} /></button>
+                {/* 🌟 [FIXED]: สลับสีตัวอักษรเป็นสีเข้ม (text-sky-700 / text-slate-800) */}
+                <p className={`text-xs font-mono tracking-widest mb-4 ${isLight ? 'text-sky-700 font-bold' : 'text-gray-500'}`}>[ BIOGRAPHY ]</p>
+                <p className={`text-sm leading-relaxed ${isLight ? 'text-slate-800 font-medium' : 'text-gray-200'}`}>{personalInfo.description}</p>
+                
+                {/* 🌟 [FIXED]: ปรับปุ่ม X ให้เข้ากับโหมดสว่าง */}
+                <button onClick={() => { playClick(); setSelectedCard(null); }} className={`absolute top-3 right-3 p-1.5 rounded-full transition-all ${isLight ? 'bg-sky-100 hover:bg-sky-200 text-sky-900' : 'bg-black/50 hover:bg-black/80 text-white/60 hover:text-white'}`}><X size={16} /></button>
               </motion.div>
             )}
 
             {selectedCard === 'contact' && (
               <motion.div layoutId="hud-contact" transition={{ type: 'spring', stiffness: 340, damping: 30 }}
-                className={`relative rounded-sm border overflow-hidden pointer-events-auto w-full max-w-xl ${isLight ? 'border-sky-300/30' : 'border-white/10'}`}
+                className={`relative rounded-sm border overflow-hidden w-full max-w-xl ${isLight ? 'bg-white/5 border-sky-300/40 shadow-xl backdrop-blur-md' : 'bg-black/40 border-white/10'}`}
               >
-                <div className="px-6 pt-5 pb-3 bg-white/5">
-                  <p className={`text-xs font-mono tracking-widest ${isLight ? 'text-sky-400/60' : 'text-gray-500'}`}>[ CONTACT MATRIX ]</p>
+                <div className={`px-6 pt-5 pb-3 ${isLight ? 'bg-sky-100/50 border-b border-sky-300/20' : 'bg-white/5'}`}>
+                  <p className={`text-xs font-mono tracking-widest ${isLight ? 'text-sky-700 font-bold' : 'text-gray-500'}`}>[ CONTACT MATRIX ]</p>
                 </div>
                 {contactItems.map((c, idx) => (
-                  <div key={idx} className={`flex items-center gap-4 px-6 py-4 border-t ${isLight ? 'border-sky-300/10 bg-white/5' : 'border-white/5 bg-black/30'}`}>
-                    <span className={isLight ? 'text-sky-400' : 'text-cyan-400'}>{c.icon}</span>
-                    <span className={`font-mono text-xs w-20 shrink-0 ${isLight ? 'text-sky-400/60' : 'text-gray-500'}`}>{c.label}</span>
-                    <span className="text-sm text-white break-all flex-1">{c.val}</span>
+                  <div key={idx} className={`flex items-center gap-4 px-6 py-4 border-t ${isLight ? 'border-sky-300/20 bg-white/5 hover:bg-white/20' : 'border-white/5 bg-black/30'}`}>
+                    <span className={isLight ? 'text-sky-600' : 'text-cyan-400'}>{c.icon}</span>
+                    <span className={`font-mono text-xs w-20 shrink-0 ${isLight ? 'text-sky-700 font-bold' : 'text-gray-500'}`}>{c.label}</span>
+                    <span className={`text-sm break-all flex-1 ${isLight ? 'text-slate-800 font-medium' : 'text-white'}`}>{c.val}</span>
+                    
                     {c.label === 'EMAIL' && (
-                      <a
-                        href={`mailto:${c.val}`}
-                        onClick={playClick}
-                        className={`shrink-0 p-1.5 rounded-sm transition-all ${
-                          isLight ? 'text-sky-400/30 hover:text-sky-300' : 'text-gray-600 hover:text-cyan-400'
-                        }`}
-                      >
-                        <Send size={14} />
+                      <a href={`mailto:${c.val}`} onClick={(e) => { e.stopPropagation(); playClick(); }} className={`shrink-0 p-1.5 rounded-sm transition-all ${isLight ? 'text-sky-600 hover:bg-sky-100' : 'text-gray-600 hover:text-cyan-400'}`}>
+                        <Send size={16} />
                       </a>
                     )}
                     {(c.label === 'EMAIL' || c.label === 'PHONE') && (
-                      <button
-                        onClick={(e) => handleCopyContact(e, c.label, c.val)}
-                        className={`shrink-0 p-1.5 rounded-sm transition-all ${
-                          copiedContact === c.label
-                            ? 'text-emerald-400'
-                            : isLight ? 'text-sky-400/30 hover:text-sky-300' : 'text-gray-600 hover:text-cyan-400'
-                        }`}
-                      >
-                        {copiedContact === c.label ? <Check size={14} /> : <Copy size={14} />}
+                      <button onClick={(e) => handleCopyContact(e, c.label, c.val)} className={`shrink-0 p-1.5 rounded-sm transition-all ${copiedContact === c.label ? 'text-emerald-600' : isLight ? 'text-sky-600 hover:bg-sky-100' : 'text-gray-600 hover:text-cyan-400'}`}>
+                        {copiedContact === c.label ? <Check size={16} /> : <Copy size={16} />}
                       </button>
                     )}
                   </div>
                 ))}
-                <button onClick={() => { playClick(); setSelectedCard(null); }} className="absolute top-3 right-3 p-1.5 bg-black/50 hover:bg-black/80 rounded-full text-white/60 hover:text-white transition-all"><X size={16} /></button>
+                <button onClick={() => { playClick(); setSelectedCard(null); }} className={`absolute top-3 right-3 p-1.5 rounded-full transition-all ${isLight ? 'bg-sky-100 hover:bg-sky-200 text-sky-900' : 'bg-black/50 hover:bg-black/80 text-white/60 hover:text-white'}`}><X size={16} /></button>
               </motion.div>
             )}
 
             {selectedCard === 'education' && (
               <motion.div layoutId="hud-education" transition={{ type: 'spring', stiffness: 340, damping: 30 }}
-                className={`relative rounded-sm border pointer-events-auto w-full max-w-xl ${isLight ? 'bg-white/5 border-sky-300/30' : 'bg-white/3 border-white/10'}`}
+                className={`relative rounded-sm border w-full max-w-xl ${isLight ? 'bg-white/5 border-sky-300/40 shadow-xl backdrop-blur-md' : 'bg-white/3 border-white/10'}`}
               >
                 <div className="p-6 sm:p-8 flex items-center gap-6">
                   {education.universityLogo && (
@@ -1211,18 +1181,30 @@ export default function DataSlate() {
                       onClick={() => { setSelectedCard(null); openLightbox([education.universityLogo]); }}
                     />
                   )}
-                  <div>
-                    <p className={`text-xs font-mono mb-3 ${isLight ? 'text-sky-400/60' : 'text-gray-500'}`}><GraduationCap size={11} className="inline mr-1.5" />ORIGIN</p>
-                    {education.universityName && <p className="text-xl text-white font-serif leading-snug">{education.universityName}</p>}
-                    {education.major && <p className={`text-sm mt-1.5 ${isLight ? 'text-sky-300' : 'text-cyan-400'}`}>{education.major}</p>}
-                    {eduLine && <p className={`text-xs font-mono mt-1.5 ${isLight ? 'text-sky-200/50' : 'text-gray-600'}`}>{eduLine}</p>}
+                  <div className="min-w-0 flex-1">
+                    <p className={`text-xs font-mono mb-3 ${isLight ? 'text-sky-700 font-bold' : 'text-gray-500'}`}><GraduationCap size={11} className="inline mr-1.5" />ORIGIN</p>
+                    {education.universityName && <p className={`text-xl font-serif leading-snug ${isLight ? 'text-slate-800 font-bold' : 'text-white'}`}>{education.universityName}</p>}
+                    {education.major && <p className={`text-sm mt-1.5 ${isLight ? 'text-sky-600 font-semibold' : 'text-cyan-400'}`}>{education.major}</p>}
+                    {eduLine && <p className={`text-xs font-mono mt-1.5 ${isLight ? 'text-slate-600 font-medium' : 'text-gray-600'}`}>{eduLine}</p>}
                   </div>
                 </div>
-                <button onClick={() => { playClick(); setSelectedCard(null); }} className="absolute top-3 right-3 p-1.5 bg-black/50 hover:bg-black/80 rounded-full text-white/60 hover:text-white transition-all"><X size={16} /></button>
+                <button onClick={() => { playClick(); setSelectedCard(null); }} className={`absolute top-3 right-3 p-1.5 rounded-full transition-all ${isLight ? 'bg-sky-100 hover:bg-sky-200 text-sky-900' : 'bg-black/50 hover:bg-black/80 text-white/60 hover:text-white'}`}><X size={16} /></button>
               </motion.div>
             )}
+
+            {selectedProjCover && (
+              <motion.div layoutId={`proj-cover-${selectedProjCover.id}`} transition={{ type: 'spring', stiffness: 340, damping: 30 }}
+                className={`relative rounded-sm overflow-hidden border w-full max-w-3xl ${isLight ? 'border-sky-300/40 bg-white/5 shadow-xl' : 'border-white/10 bg-black/40'}`}
+                style={{ maxHeight: '82vh' }}
+              >
+                <div className="absolute inset-0 bg-cover bg-center opacity-30 blur-xl" style={{ backgroundImage: `url(${selectedProjCover.src})` }} />
+                <img src={selectedProjCover.src} alt="cover" className="relative z-10 w-full h-full object-contain max-h-[82vh] drop-shadow-2xl" />
+                <button onClick={() => { playClick(); setSelectedProjCover(null); }} className={`absolute top-3 right-3 z-20 p-1.5 rounded-full transition-all ${isLight ? 'bg-white/80 hover:bg-white text-gray-800' : 'bg-black/60 hover:bg-black/90 text-white/60 hover:text-white'}`}><X size={18} /></button>
+              </motion.div>
+            )}
+
           </div>
-        </>
+        </motion.div>
       )}
     </AnimatePresence>
 

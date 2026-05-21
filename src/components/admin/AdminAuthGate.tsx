@@ -203,14 +203,14 @@ export default function AdminAuthGate({ children }: { children: ReactNode }) {
   if (stage === 'authed' || isViewMode) return <>{children}</>;
 
   return (
-    <div className="fixed inset-0 z-200 flex items-center justify-center bg-gray-950 text-gray-300 font-mono px-4">
+    <div className="fixed inset-0 z-200 flex items-center justify-center bg-[#001320] text-gray-300 font-mono px-4">
       {/* bg accents */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-cyan-500/10 blur-3xl" />
         <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-purple-500/10 blur-3xl" />
       </div>
 
-      <div className="relative w-full max-w-md bg-black/70 border border-cyan-500/30 backdrop-blur-xl rounded-sm shadow-[0_0_60px_rgba(34,211,238,0.15)] p-8">
+      <div className="relative w-full max-w-md bg-white/5 border border-cyan-500/30 backdrop-blur-xl rounded-sm shadow-[0_0_60px_rgba(34,211,238,0.15)] p-8">
         <div className="flex items-center justify-between mb-6 pb-4 border-b border-cyan-500/20">
           <div>
             <p className="text-[10px] tracking-[0.4em] text-cyan-500 uppercase flex items-center gap-2">
@@ -251,7 +251,7 @@ export default function AdminAuthGate({ children }: { children: ReactNode }) {
                 autoFocus
                 disabled={busy}
                 placeholder="• • • • • •"
-                className="w-full bg-black/60 border border-cyan-500/30 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-500/40 outline-none px-4 py-3 text-lg tracking-[0.5em] text-cyan-100 rounded-sm placeholder:text-cyan-800"
+                className="w-full bg-white/5 border border-cyan-500/30 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-500/40 outline-none px-4 py-3 text-lg tracking-[0.5em] text-cyan-100 rounded-sm placeholder:text-cyan-800"
               />
             </div>
 
@@ -344,7 +344,7 @@ export default function AdminAuthGate({ children }: { children: ReactNode }) {
                 autoFocus
                 disabled={busy}
                 placeholder="000000"
-                className="w-full bg-black/60 border border-cyan-500/30 focus:border-cyan-400 outline-none px-4 py-3 text-2xl tracking-[0.6em] text-center text-cyan-100 rounded-sm placeholder:text-cyan-800"
+                className="w-full bg-white/5 border border-cyan-500/30 focus:border-cyan-400 outline-none px-4 py-3 text-2xl tracking-[0.6em] text-center text-cyan-100 rounded-sm placeholder:text-cyan-800"
               />
               <div className="flex justify-between text-[10px] tracking-widest mt-2">
                 <span className={otpSecondsLeft === 0 ? 'text-red-400' : 'text-gray-500'}>
@@ -401,7 +401,7 @@ export default function AdminAuthGate({ children }: { children: ReactNode }) {
                 autoFocus
                 disabled={busy}
                 placeholder="อย่างน้อย 6 ตัวอักษร"
-                className="w-full bg-black/60 border border-cyan-500/30 focus:border-cyan-400 outline-none px-4 py-3 tracking-[0.4em] text-cyan-100 rounded-sm placeholder:text-cyan-800/60"
+                className="w-full bg-white/5 border border-cyan-500/30 focus:border-cyan-400 outline-none px-4 py-3 tracking-[0.4em] text-cyan-100 rounded-sm placeholder:text-cyan-800/60"
               />
             </div>
             <div>
@@ -413,7 +413,7 @@ export default function AdminAuthGate({ children }: { children: ReactNode }) {
                 value={confirmPasscode}
                 onChange={(e) => setConfirmPasscode(e.target.value)}
                 disabled={busy}
-                className="w-full bg-black/60 border border-cyan-500/30 focus:border-cyan-400 outline-none px-4 py-3 tracking-[0.4em] text-cyan-100 rounded-sm"
+                className="w-full bg-white/5 border border-cyan-500/30 focus:border-cyan-400 outline-none px-4 py-3 tracking-[0.4em] text-cyan-100 rounded-sm"
               />
             </div>
             <button
